@@ -22,7 +22,7 @@ def fetch_all_tech_jobs():
     print("Starting Tech Jobs Scraper (All Software Categories)...")
     
     # API بيجيب كل وظايف البرمجة والتكنولوجيا (Software Development) بكل تخصصاتها
-    api_url = "https://remotive.com/api/remote-jobs?category=software-dev"
+    api_url = "https://remotive.com/api/remote-jobs"
     
     try:
         response = requests.get(api_url)
