@@ -22,16 +22,18 @@ engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# --- 2. Selenium Setup ---
+# --- 2. Selenium Setup (Brave Browser) ---
 def setup_driver():
     chrome_options = Options()
-    # لو مش عايز المتصفح يظهر قدامك شيل الهاشتاج من السطر اللي تحت
+    
+    # السطر ده هو السر: هنا بندي للسيلينيوم مسار متصفح Brave على جهازك
+    chrome_options.binary_location = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+    
     # chrome_options.add_argument("--headless") 
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-notifications")
     
-    # بيسطب الـ WebDriver بتاع كروم أوتوماتيك
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
