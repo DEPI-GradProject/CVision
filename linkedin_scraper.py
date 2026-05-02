@@ -22,20 +22,25 @@ engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# --- 2. Selenium Setup (Brave Browser) ---
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+# --- 2. Selenium Setup (Brave Browser - Updated) ---
 def setup_driver():
     chrome_options = Options()
     
-    # السطر ده هو السر: هنا بندي للسيلينيوم مسار متصفح Brave على جهازك
+    # مسار متصفح Brave
     chrome_options.binary_location = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
     
-    # chrome_options.add_argument("--headless") 
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-notifications")
     
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    # السطر ده بيخفي عن لينكدإن إنك بتستخدم سيلينيوم (عشان البان)
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    
+    # هنشغل المتصفح مباشرة بالاعتماد على Selenium Manager المدمج
+    driver = webdriver.Chrome(options=chrome_options)
     return driver
 
 # --- 3. Scraping Logic ---
