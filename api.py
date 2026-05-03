@@ -63,4 +63,4 @@ def get_training_data(limit: int = 100):
             "data": training_data
         }
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": str(e)}   
