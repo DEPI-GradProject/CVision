@@ -45,3 +45,16 @@ CVision/
 ├── run_scraper.bat             # Windows Batch file for Task Scheduler automation
 ├── .env                        # Environment variables (Database connection secrets)
 └── requirements.txt            # Python dependencies
+
+    Setup & Installation
+1. Clone the repository & activate the virtual environment:
+
+Bash
+
+git clone [https://github.com/yourusername/CVision.git](https://github.com/yourusername/CVision.git)
+cd CVision
+python -m venv .venv
+# On Windows
+.venv\Scripts\activate
+# On Mac/Linux
+source .venv/bin/activate
