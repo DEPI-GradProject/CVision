@@ -58,3 +58,16 @@ python -m venv .venv
 .venv\Scripts\activate
 # On Mac/Linux
 source .venv/bin/activate
+
+2. Install dependencies:
+
+Bash
+
+pip install -r requirements.txt
+3. Configure Environment Variables:
+Create a .env file in the root directory and add your PostgreSQL database URL:
+
+Ini, TOML
+
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+
