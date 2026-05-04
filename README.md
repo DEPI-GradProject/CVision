@@ -71,3 +71,37 @@ Ini, TOML
 
 DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
 
+    Usage Guide
+1. Initialize the Database:
+
+Bash
+
+python db_setup.py
+2. Upload Historical Training Data:
+
+Bash
+
+python training_data.py
+3. Run the Daily Scraper:
+
+Bash
+
+python scrapers/linkedin_scraper.py
+4. Clean the Data for AI Processing:
+
+Bash
+
+python data_cleaner.py
+5. Start the API Server:
+
+Bash
+
+uvicorn api:app --reload
+Access the interactive API documentation (Swagger UI) at: http://127.0.0.1:8000/docs
+
+     API Endpoints (For AI Agents)
+The AI Team can interface with the following endpoints to fetch noise-free data:
+
+GET /api/v1/jobs/latest : Fetches the most recently scraped live jobs. (Default limit: 50)
+
+GET /api/v1/jobs/training : Fetches historical cleaned data for LLM context and training. (Default limit: 100)
