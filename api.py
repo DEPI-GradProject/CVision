@@ -46,4 +46,14 @@ def get_latest_jobs(limit: int = 50):
         return {"status": "success", "data": df.to_dict(orient="records")}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+# the path for this endpoint is /api/v1/jobs/training and it also accepts an optional 'limit' query parameter to specify how many training job records to return (default is 100). It queries the 'training_jobs' table in the database, retrieves the specified number of records, and returns them as a JSON response. If there's an error during the database query, it returns an error message instead.
+@app.get("/api/v1/jobs/training")
+def get_training_data(limit: int = 100):
+    try:
+        query = f"SELECT * FROM training_jobs LIMIT {limit}"
+        df = pd.read_sql(query, engine)
+        return {"status": "success", "data": df.to_dict(orient="records")}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 
