@@ -29,3 +29,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- 4. API Endpoints ---
+
+@app.get("/")
+def home():
+    return {"message": "CVision API is Online 🚀"}
+
+# the path for this endpoint is /api/v1/jobs/latest and it accepts an optional query parameter 'limit' to specify how many of the latest jobs to return (default is 50 if not provided). It fetches the latest jobs from the 'jobs_raw' table in the database, ordered by published_date in descending order, and returns them as a JSON response. If there's an error during the database query, it returns an error message instead.
+@app.get("/api/v1/jobs/latest")
+def get_latest_jobs(limit: int = 50):
+    try:
+        query = f"SELECT * FROM jobs_raw ORDER BY published_date DESC LIMIT {limit}"
+        df = pd.read_sql(query, engine)
+        if 'published_date' in df.columns:
+            df['published_date'] = df['published_date'].astype(str)
+        return {"status": "success", "data": df.to_dict(orient="records")}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
