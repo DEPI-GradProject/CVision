@@ -21,7 +21,7 @@ session = Session()
 def fetch_all_tech_jobs():
     print("Starting Tech Jobs Scraper (All Software Categories)...")
     
-    # API بيجيب كل وظايف البرمجة والتكنولوجيا (Software Development) بكل تخصصاتها
+    # Api endpoint for remote tech jobs from Remotive (covers all software categories globally)
     api_url = "https://remotive.com/api/remote-jobs"
     
     try:
@@ -42,15 +42,15 @@ def fetch_all_tech_jobs():
             description = job.get('description', '')
             platform = "Remotive (Global Tech)"
             
-            # تظبيط التاريخ
+            # making the date parsing more robust by using fromisoformat and handling exceptions (since some APIs might have different date formats or missing dates)
             pub_date_str = job.get('publication_date', '')
             try:
-                # صيغة التاريخ من الـ API بتبقى مثلا 2026-05-02T12:00:00
+                # the API might return dates in ISO format, but sometimes it could be missing or in a different format, so we handle that gracefully
                 pub_date = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
             except Exception:
                 pub_date = datetime.now()
 
-            # التأكد إن الوظيفة مش متكررة
+            # ensure we don't add duplicate jobs based on the unique job link (assuming the API provides a unique URL for each job). This prevents cluttering the database with duplicates if we run the scraper multiple times.
             exists = session.query(RawJob).filter_by(job_link=link).first()
             
             if not exists:
@@ -64,11 +64,11 @@ def fetch_all_tech_jobs():
                 session.add(new_job)
                 new_jobs_count += 1
                 
-                # بنطبع بس أول كام وظيفة عشان الزحمة
+                # check some of the new jobs and print them out (but only the first 10 to avoid flooding the console)
                 if new_jobs_count <= 10:
                     print(f"  [NEW] Added: {title[:50]}...")
                 
-        # حفظ كل الوظايف الجديدة في الداتابيز
+        # saving all the new jobs to the database at once after the loop is more efficient than committing inside the loop. This way we reduce the number of transactions and speed up the process, especially if there are many new jobs.
         session.commit()
         print(f"\nScraping complete! Added {new_jobs_count} NEW tech jobs to the database.")
         
