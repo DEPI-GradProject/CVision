@@ -67,14 +67,14 @@ def scrape_linkedin_jobs(keyword, location="Egypt"):
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
             print("  -> Hit the bottom, waiting 10 extra seconds just in case...")
-            time.sleep(10) # لو وصل للآخر يصبر 10 ثواني يمكن حاجة بتحمل
+            time.sleep(10) #wait a bit longer at the bottom to ensure all jobs are loaded before we check the height again
             new_height = driver.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 print("  -> No more new jobs loading. Stopping scroll.")
                 break
         last_height = new_height
 
-    # التايمر اللي إنت طلبته (دقيقتين = 120 ثانية) قبل ما يستخرج الداتا ويقفل
+    # timer to ensure all dynamic content is fully loaded before we start parsing the page source. This is important because sometimes even after scrolling, some jobs might still be loading in the background, and we want to make sure we capture everything.
     print("\nScrolling done! Waiting for 2 full minutes (120 seconds) to ensure everything is rendered...")
     time.sleep(120) 
 
@@ -113,7 +113,7 @@ def scrape_linkedin_jobs(keyword, location="Egypt"):
     print(f"Success! Added {new_jobs_count} NEW jobs for {keyword}.")
     
 if __name__ == "__main__":
-    # قائمة بكل المجالات المشهورة (تقدر تضيف أو تمسح منها براحتك)
+    # most in-demand tech job titles and keywords to search for on LinkedIn (you can customize this list based on your target audience or specific tech categories you want to focus on)
     tech_keywords = [
         "Software Engineer", 
         "Data Scientist", 
