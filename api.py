@@ -57,3 +57,19 @@ def get_training_data(limit: int = 100):
         return {"status": "error", "message": str(e)}
 
 
+# path for this endpoint is /api/v1/analyze-cv and it accepts a POST request with a file upload (specifically a PDF file). The endpoint is designed to receive the CV file from the user, and it's where your AI Matcher will eventually be integrated to analyze the CV against the job data. For now, it simply returns a success message confirming that the CV file was received, along with the filename and a note that the AI Matcher is ready for integration. If there's an error during file reception, it returns an error message instead.
+@app.post("/api/v1/analyze-cv")
+async def analyze_cv(file: UploadFile = File(...)):
+    """
+    here we receive the PDF file from the user.
+    your AI colleague will integrate their agents here.
+    """
+    try:
+        # temporarily return a success message
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "message": "CV file received. AI Matcher is ready for integration."
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
