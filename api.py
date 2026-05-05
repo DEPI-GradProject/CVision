@@ -20,3 +20,12 @@ app = FastAPI(
     version="1.1.0"
 )
 
+# --- 3. CORS Configuration so the frontend can access this API without issues (you can adjust the allowed origins in production for better security) ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], #make any origin can access this API (you can specify your frontend URL here in production)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
