@@ -25,7 +25,8 @@ def setup_driver():
     chrome_options = Options()
     chrome_options.binary_location = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
     
-    # عشان نخفف الحمل على جهازك وهو بيسحب
+    # so the browser runs in the background without opening a window (headless mode)
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-notifications")
@@ -48,11 +49,11 @@ def scrape_linkedin_jobs(keyword, location="Egypt"):
     print("Scrolling and bypassing 'See more jobs' button...")
     last_height = driver.execute_script("return document.body.scrollHeight")
     
-    # هنخليه ينزل براحته 25 مرة
+    # scorlling about 25 times with waits in between to allow jobs to load (you can adjust the number of scrolls and wait times based on how many jobs you want to load and how fast the page loads)
     for i in range(25): 
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         print(f"  -> Scroll {i+1}/25... waiting 5 seconds for jobs to load")
-        time.sleep(5) # وقت أطول للتحميل بين كل سكرول
+        time.sleep(5) #longer wait time to allow more jobs to load
         
         try:
             see_more_btn = driver.find_element(By.CSS_SELECTOR, "button.infinite-scroller__show-more-button")
