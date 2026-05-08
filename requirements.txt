@@ -8,11 +8,26 @@ sentence-transformers
 pdfplumber
 python-docx
 spacy
-
-#go to cd path/to/your/folder
-#Then run this command to install the dependencies
-#pip install -r requirements.txt
-
-#Warning: You have to install python -m spacy download en_core_web_sm individually after 
-#installing the dependencies. This is required for the spacy library to work properly.
-python -m spacy download en_core_web_sm
+pydantic
+pymupdf
+python-docx
+langchain
+langchain-openai
+langchain-community
+langchain-google-genai
+langchain-groq
+dotenv
+langchain-core
+langgraph
+arxiv
+wikipedia
+langchain-tavily
+langgraph-cli[inmem]
+sentence-transformers
+streamlit
+pandas
+chromadb 
+langchain-chroma
+langchain-huggingface
+langchain-huggingface
+faiss-cpu

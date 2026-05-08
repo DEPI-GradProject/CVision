@@ -1,0 +1,6 @@
+{
+    "dependencies": ["."],
+    "graphs": {
+        "cv_workflow": "./graph/workflow.py:graph"
+    }
+}
