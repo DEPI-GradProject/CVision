@@ -4,8 +4,6 @@ CVision is an AI-powered intelligent job-matching platform designed to bridge th
 
 This repository houses the **Data Engineering Engine** of the project: the automated data collection, storage, NLP-cleaning pipeline, and the REST API that feeds the AI Agents.
 
----
-
 ## System Architecture & Project Roadmap
 
 The CVision ecosystem is divided into two main layers. **This repository covers Layer 1.**
@@ -24,8 +22,6 @@ The CVision ecosystem is divided into two main layers. **This repository covers 
     * *Agent 3 (Job Matcher):* Consumes data from **our FastAPI**, generates Vector Embeddings, calculates Match Scores (Cosine Similarity), and identifies Skill Gaps.
     * *Agent 4 (Report Builder):* Generates the final user report.
 * **Frontend:** A React/Vercel web interface for user interaction.
-
----
 
 ## Repository Structure
 
