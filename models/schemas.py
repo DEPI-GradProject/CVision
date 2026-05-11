@@ -1,7 +1,8 @@
 # models/schemas.py
 
+
 from pydantic import BaseModel
-from typing import Optional
+
 
 # CV Parser Output
 class CVMetadata(BaseModel):
@@ -13,11 +14,13 @@ class CVMetadata(BaseModel):
     pages_count: int
     length_pages: float
 
+
 class CVData(BaseModel):
     raw_text: str
     file_name: str
     file_type: str
-    metadata: Optional[CVMetadata] = None
+    metadata: CVMetadata | None = None
+
 
 # CV Analyzer Output
 class ATSBreakdown(BaseModel):
@@ -26,37 +29,42 @@ class ATSBreakdown(BaseModel):
     content: int
     length: int
 
+
 class ATSResult(BaseModel):
     ats_score: int
     breakdown: ATSBreakdown
     issues: list[str]
+
 
 class AnalysisResult(BaseModel):
     strengths: list[str]
     weaknesses: list[str]
     suggestions: list[str]
     skills_extracted: list[str]
-    ats_result: Optional[ATSResult] = None
+    ats_result: ATSResult | None = None
+
 
 # Job Matcher Output
 class Job(BaseModel):
     title: str
     link: str
     skills: str
-    match_score: Optional[int] = None
-    matched_skills: Optional[list[str]] = None
-    missing_skills: Optional[list[str]] = None
-    reason: Optional[str] = None
+    match_score: int | None = None
+    matched_skills: list[str] | None = None
+    missing_skills: list[str] | None = None
+    reason: str | None = None
+
 
 class JobMatches(BaseModel):
     matched_jobs: list[Job]
 
-# Agent State (الطريقة الأصلية الخاصة بك)
+
+# Agent State
 class AgentState(BaseModel):
-    file_path: Optional[str] = None
-    file_name: Optional[str] = None
-    cv_data: Optional[CVData] = None
-    analysis: Optional[AnalysisResult] = None
-    job_matches: Optional[JobMatches] = None
-    final_report: Optional[str] = None
-    error: Optional[str] = None
+    file_path: str | None = None
+    file_name: str | None = None
+    cv_data: CVData | None = None
+    analysis: AnalysisResult | None = None
+    job_matches: JobMatches | None = None
+    final_report: str | None = None
+    error: str | None = None

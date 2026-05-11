@@ -1,18 +1,30 @@
 # agents/cv_parser.py
 
 import fitz  # pymupdf
+
 from models.schemas import AgentState, CVMetadata
 from utils.file_handler import parse_cv_file
 
 SECTIONS_KEYWORDS = [
-    "experience", "education", "skills", "summary", "objective",
-    "projects", "certifications", "languages", "references",
-    "achievements", "awards", "volunteer", "publications"
+    "experience",
+    "education",
+    "skills",
+    "summary",
+    "objective",
+    "projects",
+    "certifications",
+    "languages",
+    "references",
+    "achievements",
+    "awards",
+    "volunteer",
+    "publications",
 ]
+
 
 def extract_metadata(file_path: str) -> CVMetadata:
     doc = fitz.open(file_path)
-    
+
     pages_count = len(doc)
     has_tables = False
     has_images = False
@@ -54,13 +66,14 @@ def extract_metadata(file_path: str) -> CVMetadata:
         sections_missing=sections_missing,
         fonts_count=len(fonts_set),
         pages_count=pages_count,
-        length_pages=float(pages_count)
+        length_pages=float(pages_count),
     )
+
 
 def cv_parser_agent(state: AgentState, file_path: str, file_name: str) -> AgentState:
     try:
         cv_data = parse_cv_file(file_path, file_name)
-        
+
         if cv_data.file_type == "pdf":
             metadata = extract_metadata(file_path)
             cv_data.metadata = metadata

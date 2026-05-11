@@ -1,26 +1,22 @@
 # agents/job_matcher.py
 
-from langchain_groq import ChatGroq
+import json
+import logging
+
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+from langchain_groq import ChatGroq
+
 from models.schemas import AgentState, Job, JobMatches
 from utils.retriever import search_jobs
-from dotenv import load_dotenv
-import json
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
-# سريع للـ Query Enhancement
-llm_fast = ChatGroq(
-    model="llama-3.1-8b-instant",
-    temperature=0.1
-)
+# Fast LLM for Query Enhancement
+llm_fast = ChatGroq(model="llama-3.1-8b-instant", temperature=0.1)
 
-# قوي للـ Match Scoring
-llm_strong = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    temperature=0.1
-)
+# Strong LLM for Match Scoring
+llm_strong = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.1)
 
 # Query Enhancement Prompt
 query_prompt = PromptTemplate.from_template("""
@@ -73,6 +69,7 @@ Return JSON only, no extra text:
 
 match_chain = match_prompt | llm_strong | StrOutputParser()
 
+
 def job_matcher_agent(state: AgentState) -> AgentState:
     try:
         if state.analysis is None:
@@ -83,7 +80,7 @@ def job_matcher_agent(state: AgentState) -> AgentState:
 
         # Step 1: Query Enhancement
         enhanced_query = query_chain.invoke({"skills": skills})
-        print(f"Enhanced Query: {enhanced_query}")
+        logger.info("Enhanced Query: %s", enhanced_query)
 
         # Step 2: Semantic Search with Enhanced Query
         raw_jobs = search_jobs(enhanced_query, k=10)
@@ -96,10 +93,7 @@ def job_matcher_agent(state: AgentState) -> AgentState:
             jobs_text += "---\n"
 
         # Step 3: Match Scoring
-        result = match_chain.invoke({
-            "skills": skills,
-            "jobs": jobs_text
-        })
+        result = match_chain.invoke({"skills": skills, "jobs": jobs_text})
 
         clean = result
         if "```json" in clean:
@@ -117,7 +111,7 @@ def job_matcher_agent(state: AgentState) -> AgentState:
                 match_score=j.get("match_score"),
                 matched_skills=j.get("matched_skills"),
                 missing_skills=j.get("missing_skills"),
-                reason=j.get("reason")
+                reason=j.get("reason"),
             )
             for j in parsed["matched_jobs"]
         ]

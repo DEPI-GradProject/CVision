@@ -9,8 +9,10 @@ pdfplumber
 python-docx
 spacy
 pydantic
+pydantic-settings
+httpx
+alembic
 pymupdf
-python-docx
 langchain
 langchain-openai
 langchain-community
@@ -23,11 +25,10 @@ arxiv
 wikipedia
 langchain-tavily
 langgraph-cli[inmem]
-sentence-transformers
 streamlit
-pandas
-chromadb 
+chromadb
 langchain-chroma
 langchain-huggingface
-langchain-huggingface
 faiss-cpu
+sentry-sdk
+slowapi

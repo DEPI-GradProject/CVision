@@ -27,6 +27,7 @@ env/
 # Local environment variables / secrets
 .env
 .env.*
+!.env.example
 
 # Local tool state / credentials
 .langgraph_api/
@@ -49,3 +50,18 @@ Desktop.ini
 
 # Large/generated artifacts (project-specific)
 Data/faiss_db/
+data/faiss_db/
+Data/jobs.csv
+data/jobs.csv
+/jobs.csv
+Data/structured_jobs_cvision.json
+data/structured_jobs_cvision.json
+
+# Jupyter notebooks (personal EDA)
+*.ipynb
+
+# Sample/personal CV files
+/Essam_Mohamed_.pdf
+
+# uv package manager lockfile
+/uv.lock

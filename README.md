@@ -1,6 +1,6 @@
-# CVision - Data Science Pipeline & Core API 
+# CVision - Data Science Pipeline & Core API
 
-CVision is an AI-powered intelligent job-matching platform designed to bridge the gap between job seekers' resumes and real-time market opportunities. 
+CVision is an AI-powered intelligent job-matching platform designed to bridge the gap between job seekers' resumes and real-time market opportunities.
 
 This repository houses the **Data Engineering Engine** of the project: the automated data collection, storage, NLP-cleaning pipeline, and the REST API that feeds the AI Agents.
 
