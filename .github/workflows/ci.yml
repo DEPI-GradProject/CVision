@@ -17,6 +17,8 @@ jobs:
       - run: pip install ruff pre-commit
       - run: ruff check .
       - run: pre-commit run --all-files --show-diff-on-failure || (echo "Pre-commit hooks failed. Run 'pre-commit run --all-files' locally to fix." && false)
+      - name: Verify migration files are valid Python
+        run: python -m compileall alembic/versions/
 
   test:
     runs-on: ubuntu-latest
