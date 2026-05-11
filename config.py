@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     final_wait_seconds: int = 30
 
     faiss_allow_dangerous: bool = False
+    sentry_dsn: str = ""
 
     @property
     def database_url_with_ssl(self) -> str:
