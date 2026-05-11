@@ -31,3 +31,4 @@ langchain-chroma
 langchain-huggingface
 faiss-cpu
 sentry-sdk
+slowapi

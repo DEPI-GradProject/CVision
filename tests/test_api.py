@@ -67,3 +67,18 @@ def test_analyze_cv_stream_too_large():
     )
     assert response.status_code == 400
     assert "too large" in response.json()["detail"].lower()
+
+
+def test_health_endpoint():
+    response = client.get("/api/v1/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert "status" in data
+    assert "database" in data
+
+
+def test_health_endpoint_rate_limited():
+    for _ in range(35):
+        client.get("/api/v1/health")
+    response = client.get("/api/v1/health")
+    assert response.status_code == 429

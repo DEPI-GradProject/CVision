@@ -6,9 +6,12 @@ import tempfile
 
 import pandas as pd
 import sentry_sdk
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy import create_engine, text
 
 from config import settings
@@ -41,14 +44,32 @@ if settings.sentry_dsn:
     )
     logger.info("Sentry initialized")
 
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 @app.get("/")
 def home():
     return {"message": "CVision API is Online"}
 
 
+@app.get("/api/v1/health")
+@limiter.limit("30/minute")
+def health(request: Request):
+    db_ok = False
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            db_ok = True
+    except Exception:
+        pass
+    return {"status": "healthy" if db_ok else "degraded", "database": "connected" if db_ok else "disconnected"}
+
+
 @app.get("/api/v1/jobs/latest")
-def get_latest_jobs(limit: int = 50):
+@limiter.limit("30/minute")
+def get_latest_jobs(request: Request, limit: int = 50):
     try:
         query = text("SELECT * FROM jobs_raw ORDER BY published_date DESC LIMIT :limit")
         df = pd.read_sql(query, engine, params={"limit": limit})
@@ -61,7 +82,8 @@ def get_latest_jobs(limit: int = 50):
 
 
 @app.get("/api/v1/jobs/training")
-def get_training_data(limit: int = 100):
+@limiter.limit("30/minute")
+def get_training_data(request: Request, limit: int = 100):
     try:
         query = text("SELECT * FROM training_jobs LIMIT :limit")
         df = pd.read_sql(query, engine, params={"limit": limit})
@@ -72,7 +94,8 @@ def get_training_data(limit: int = 100):
 
 
 @app.post("/api/v1/analyze-cv")
-async def analyze_cv(file: UploadFile = File(...)):
+@limiter.limit("5/minute")
+async def analyze_cv(request: Request, file: UploadFile = File(...)):
     allowed_extensions = {"pdf", "docx"}
     ext = file.filename.split(".")[-1].lower() if file.filename else ""
 
@@ -158,7 +181,8 @@ def _run_pipeline(file_path: str, file_name: str):
 
 
 @app.post("/api/v1/analyze-cv/stream")
-async def analyze_cv_stream(file: UploadFile = File(...)):
+@limiter.limit("5/minute")
+async def analyze_cv_stream(request: Request, file: UploadFile = File(...)):
     allowed_extensions = {"pdf", "docx"}
     ext = file.filename.split(".")[-1].lower() if file.filename else ""
 
