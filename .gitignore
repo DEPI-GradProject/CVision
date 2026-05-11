@@ -51,3 +51,6 @@ Desktop.ini
 # Large/generated artifacts (project-specific)
 Data/faiss_db/
 data/faiss_db/
+Data/jobs.csv
+data/jobs.csv
+/jobs.csv
