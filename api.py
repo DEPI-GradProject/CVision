@@ -1,10 +1,14 @@
 import logging
 import os
+import tempfile
 import pandas as pd
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
+
+from graph.workflow import graph
+from models.schemas import AgentState
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -77,14 +81,31 @@ async def analyze_cv(file: UploadFile = File(...)):
 
         logger.info("CV received: %s (%s bytes)", file.filename, file_size)
 
-        return {
-            "status": "success",
-            "filename": file.filename,
-            "size_bytes": file_size,
-            "message": "CV file received. AI Matcher is ready for integration."
-        }
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
+            tmp.write(contents)
+            tmp_path = tmp.name
+
+        try:
+            state = AgentState(file_path=tmp_path, file_name=file.filename)
+            result = graph.invoke(state)
+
+            if result.error:
+                raise HTTPException(status_code=500, detail=result.error)
+
+            return {
+                "status": "success",
+                "filename": file.filename,
+                "ats_score": result.analysis.ats_result.ats_score if result.analysis and result.analysis.ats_result else None,
+                "skills_extracted": result.analysis.skills_extracted if result.analysis else [],
+                "job_matches": len(result.job_matches.matched_jobs) if result.job_matches else 0,
+                "report": result.final_report
+            }
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error processing CV upload: %s", e)
+        logger.error("Error processing CV: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
