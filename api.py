@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 engine = create_engine(settings.database_url_with_ssl)
 
 app = FastAPI(
-    title="CVision Core API", description="Backend infrastructure for job data and CV processing", version="1.1.0"
+    title="CVision Core API", description="Backend infrastructure for job data and CV processing", version="0.2.0"
 )
 
 app.add_middleware(
