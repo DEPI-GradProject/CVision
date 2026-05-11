@@ -1,14 +1,16 @@
 import logging
 import time
 from datetime import datetime
+
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db_setup import RawJob
+
 from config import settings
+from db_setup import RawJob
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -42,7 +44,9 @@ def scrape_linkedin_jobs(keyword, location=None):
 
     driver = setup_driver()
 
-    search_url = f"https://www.linkedin.com/jobs/search?keywords={keyword.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
+    encoded_keyword = keyword.replace(" ", "%20")
+    encoded_location = location.replace(" ", "%20")
+    search_url = f"https://www.linkedin.com/jobs/search?keywords={encoded_keyword}&location={encoded_location}"
     driver.get(search_url)
 
     scroll_pause = settings.scroll_pause_seconds
@@ -105,7 +109,13 @@ def scrape_linkedin_jobs(keyword, location=None):
 
             exists = session.query(RawJob).filter_by(job_link=link).first()
             if not exists:
-                new_job = RawJob(platform="LinkedIn", job_title=title, job_link=link, description=description, published_date=datetime.now())
+                new_job = RawJob(
+                    platform="LinkedIn",
+                    job_title=title,
+                    job_link=link,
+                    description=description,
+                    published_date=datetime.now(),
+                )
                 session.add(new_job)
                 new_jobs_count += 1
 

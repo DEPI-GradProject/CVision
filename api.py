@@ -1,8 +1,9 @@
 import logging
 import os
 import tempfile
+
 import pandas as pd
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 
@@ -61,17 +62,17 @@ def get_training_data(limit: int = 100):
 
 @app.post("/api/v1/analyze-cv")
 async def analyze_cv(file: UploadFile = File(...)):
-    ALLOWED_EXTENSIONS = {"pdf", "docx"}
+    allowed_extensions = {"pdf", "docx"}
     ext = file.filename.split(".")[-1].lower() if file.filename else ""
 
-    if ext not in ALLOWED_EXTENSIONS:
+    if ext not in allowed_extensions:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: .{ext}. Use PDF or DOCX.")
 
     try:
         contents = await file.read()
         file_size = len(contents)
-        MAX_SIZE = 10 * 1024 * 1024
-        if file_size > MAX_SIZE:
+        max_size = 10 * 1024 * 1024
+        if file_size > max_size:
             raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
 
         logger.info("CV received: %s (%s bytes)", file.filename, file_size)
@@ -90,7 +91,8 @@ async def analyze_cv(file: UploadFile = File(...)):
             return {
                 "status": "success",
                 "filename": file.filename,
-                "ats_score": result.analysis.ats_result.ats_score if result.analysis and result.analysis.ats_result else None,
+                "ats_score": result.analysis.ats_result.ats_score
+                if result.analysis and result.analysis.ats_result else None,
                 "skills_extracted": result.analysis.skills_extracted if result.analysis else [],
                 "job_matches": len(result.job_matches.matched_jobs) if result.job_matches else 0,
                 "report": result.final_report
