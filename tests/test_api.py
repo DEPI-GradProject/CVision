@@ -1,9 +1,11 @@
 import pytest
+
 pytest.importorskip("sqlalchemy")
 pytest.importorskip("fastapi")
 pytest.importorskip("langgraph")
 
 from fastapi.testclient import TestClient
+
 from api import app
 
 client = TestClient(app)

@@ -1,8 +1,9 @@
 # agents/report_builder.py
 
-from langchain_groq import ChatGroq
-from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
+from langchain_groq import ChatGroq
+
 from models.schemas import AgentState
 
 llm = ChatGroq(

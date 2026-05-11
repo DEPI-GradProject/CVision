@@ -2,8 +2,8 @@
 
 import pandas as pd
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
+from langchain_huggingface import HuggingFaceEmbeddings
 
 embeddings = HuggingFaceEmbeddings(
     model_name="BAAI/bge-small-en-v1.5"
@@ -11,11 +11,11 @@ embeddings = HuggingFaceEmbeddings(
 
 def load_csv_to_faiss(csv_path: str = "Data/jobs.csv"):
     df = pd.read_csv(csv_path)
-    
+
     documents = []
     for _, row in df.iterrows():
         content = f"Title: {row['Title']}\nSkills: {row['Skills']}"
-        
+
         doc = Document(
             page_content=content,
             metadata={
@@ -26,12 +26,12 @@ def load_csv_to_faiss(csv_path: str = "Data/jobs.csv"):
             }
         )
         documents.append(doc)
-    
+
     print(f"Loading {len(documents)} jobs into FAISS...")
-    
+
     vectorstore = FAISS.from_documents(documents, embeddings)
     vectorstore.save_local("Data/faiss_db")
-    
+
     print("✅ Done! Jobs loaded into FAISS.")
 
 if __name__ == "__main__":

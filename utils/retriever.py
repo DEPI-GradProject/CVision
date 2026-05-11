@@ -1,6 +1,7 @@
 # utils/retriever.py
 
 import os
+
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -30,7 +31,7 @@ def get_vectorstore():
 def search_jobs(query: str, k: int = 5):
     vectorstore = get_vectorstore()
     results = vectorstore.similarity_search(query, k=k)
-    
+
     jobs = []
     for doc in results:
         jobs.append({
@@ -39,5 +40,5 @@ def search_jobs(query: str, k: int = 5):
             "price": doc.metadata["price"],
             "skills": doc.metadata["skills"]
         })
-    
+
     return jobs

@@ -1,5 +1,6 @@
 import fitz
 from docx import Document
+
 from models.schemas import CVData
 
 

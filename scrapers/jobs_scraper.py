@@ -1,10 +1,12 @@
 import logging
+from datetime import datetime
+
 import requests
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db_setup import RawJob
-from datetime import datetime
+
 from config import settings
+from db_setup import RawJob
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)

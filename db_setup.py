@@ -1,5 +1,5 @@
 # db_setup.py
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.orm import declarative_base
 
 from config import settings
@@ -15,14 +15,14 @@ Base = declarative_base()
 # Define the Jobs table schema
 class RawJob(Base):
     __tablename__ = 'jobs_raw'
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     platform = Column(String(50), nullable=False)
     job_title = Column(String(255), nullable=False)
     job_link = Column(String, unique=True, nullable=False) # Unique to prevent duplicates
     description = Column(Text, nullable=True)
     published_date = Column(DateTime, nullable=True)
-    
+
     def __repr__(self):
         return f"<RawJob(platform='{self.platform}', title='{self.job_title}')>"
 

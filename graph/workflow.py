@@ -1,11 +1,12 @@
 import logging
 
-from langgraph.graph import StateGraph, END
-from models.schemas import AgentState
-from agents.cv_parser import cv_parser_agent
+from langgraph.graph import END, StateGraph
+
 from agents.cv_analyzer import cv_analyzer_agent
+from agents.cv_parser import cv_parser_agent
 from agents.job_matcher import job_matcher_agent
 from agents.report_builder import report_builder_agent
+from models.schemas import AgentState
 
 logger = logging.getLogger(__name__)
 

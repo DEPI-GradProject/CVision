@@ -1,4 +1,5 @@
 import os
+
 import pandas as pd
 from sqlalchemy import create_engine
 
@@ -23,14 +24,14 @@ try:
     # --- 3. Combine Data ---
     # mix all the dataframes into one big dataframe (ignore_index=True so it resets the index)
     all_jobs_df = pd.concat([freelancer_df, guru_df, upwork_df], ignore_index=True)
-    
+
     print(f"Total jobs to upload: {len(all_jobs_df)}")
     print("Uploading to database table 'training_jobs'... This might take a minute ⏳")
 
     # --- 4. Upload to Database ---
     # upload the combined dataframe to the 'training_jobs' table in the database, replacing it if it already exists
     all_jobs_df.to_sql('training_jobs', engine, if_exists='replace', index=False)
-    
+
     print("\n✅ Success! All training data has been uploaded to the 'training_jobs' table.")
 
 except FileNotFoundError as e:

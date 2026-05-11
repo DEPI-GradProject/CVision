@@ -1,7 +1,4 @@
-from models.schemas import (
-    AgentState, CVData, CVMetadata, AnalysisResult,
-    ATSResult, ATSBreakdown, Job, JobMatches
-)
+from models.schemas import AgentState, AnalysisResult, ATSBreakdown, ATSResult, CVData, CVMetadata, Job, JobMatches
 
 
 def test_cv_metadata_defaults():
