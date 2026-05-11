@@ -14,8 +14,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install ruff
+      - run: pip install ruff pre-commit
       - run: ruff check .
+      - run: pre-commit run --all-files --show-diff-on-failure || (echo "Pre-commit hooks failed. Run 'pre-commit run --all-files' locally to fix." && false)
 
   test:
     runs-on: ubuntu-latest
