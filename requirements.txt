@@ -10,7 +10,6 @@ python-docx
 spacy
 pydantic
 pymupdf
-python-docx
 langchain
 langchain-openai
 langchain-community
@@ -23,11 +22,8 @@ arxiv
 wikipedia
 langchain-tavily
 langgraph-cli[inmem]
-sentence-transformers
 streamlit
-pandas
-chromadb 
+chromadb
 langchain-chroma
-langchain-huggingface
 langchain-huggingface
 faiss-cpu
