@@ -44,3 +44,26 @@ def test_analyze_cv_wrong_extension():
     )
     assert response.status_code == 400
     assert "Unsupported file type" in response.json()["detail"]
+
+
+def test_analyze_cv_stream_no_file():
+    response = client.post("/api/v1/analyze-cv/stream")
+    assert response.status_code == 422
+
+
+def test_analyze_cv_stream_wrong_extension():
+    response = client.post(
+        "/api/v1/analyze-cv/stream",
+        files={"file": ("test.txt", b"hello world", "text/plain")},
+    )
+    assert response.status_code == 400
+    assert "Unsupported file type" in response.json()["detail"]
+
+
+def test_analyze_cv_stream_too_large():
+    response = client.post(
+        "/api/v1/analyze-cv/stream",
+        files={"file": ("test.pdf", b"x" * (11 * 1024 * 1024), "application/pdf")},
+    )
+    assert response.status_code == 400
+    assert "too large" in response.json()["detail"].lower()
