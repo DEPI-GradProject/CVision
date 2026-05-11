@@ -15,6 +15,7 @@ engine = create_engine(settings.database_url_with_ssl)
 Session = sessionmaker(bind=engine)
 session = Session()
 
+
 def fetch_all_tech_jobs():
     logger.info("Starting Tech Jobs Scraper (All Software Categories)...")
 
@@ -27,20 +28,20 @@ def fetch_all_tech_jobs():
             return
 
         data = response.json()
-        jobs_list = data.get('jobs', [])
+        jobs_list = data.get("jobs", [])
         logger.info("Found %s tech jobs! Checking for new ones...", len(jobs_list))
 
         new_jobs_count = 0
 
         for job in jobs_list:
-            title = job.get('title', '')
-            link = job.get('url', '')
-            description = job.get('description', '')
+            title = job.get("title", "")
+            link = job.get("url", "")
+            description = job.get("description", "")
             platform = "Remotive (Global Tech)"
 
-            pub_date_str = job.get('publication_date', '')
+            pub_date_str = job.get("publication_date", "")
             try:
-                pub_date = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
+                pub_date = datetime.fromisoformat(pub_date_str.replace("Z", "+00:00"))
             except Exception:
                 pub_date = datetime.now()
 
@@ -48,11 +49,7 @@ def fetch_all_tech_jobs():
 
             if not exists:
                 new_job = RawJob(
-                    platform=platform,
-                    job_title=title,
-                    job_link=link,
-                    description=description,
-                    published_date=pub_date
+                    platform=platform, job_title=title, job_link=link, description=description, published_date=pub_date
                 )
                 session.add(new_job)
                 new_jobs_count += 1
@@ -69,6 +66,7 @@ def fetch_all_tech_jobs():
     except Exception as e:
         logger.error("An error occurred: %s", e)
         session.rollback()
+
 
 if __name__ == "__main__":
     fetch_all_tech_jobs()

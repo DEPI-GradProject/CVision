@@ -6,10 +6,7 @@ from langchain_groq import ChatGroq
 
 from models.schemas import AgentState
 
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    temperature=0.3
-)
+llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.3)
 
 parser = StrOutputParser()
 
@@ -69,13 +66,22 @@ Write a professional career report with these sections:
 Be specific, encouraging, and professional.
 """,
     input_variables=[
-        "strengths", "weaknesses", "suggestions", "skills",
-        "ats_score", "format_score", "structure_score", "content_score", "length_score",
-        "ats_issues", "jobs"
-    ]
+        "strengths",
+        "weaknesses",
+        "suggestions",
+        "skills",
+        "ats_score",
+        "format_score",
+        "structure_score",
+        "content_score",
+        "length_score",
+        "ats_issues",
+        "jobs",
+    ],
 )
 
 chain = prompt | llm | parser
+
 
 def report_builder_agent(state: AgentState) -> AgentState:
     try:
@@ -99,19 +105,21 @@ def report_builder_agent(state: AgentState) -> AgentState:
             jobs_text += f"  Reason: {job.reason}\n"
             jobs_text += f"  Link: {job.link}\n\n"
 
-        result = chain.invoke({
-            "strengths": "\n".join(state.analysis.strengths),
-            "weaknesses": "\n".join(state.analysis.weaknesses),
-            "suggestions": "\n".join(state.analysis.suggestions),
-            "skills": ", ".join(state.analysis.skills_extracted),
-            "ats_score": ats.ats_score if ats else "N/A",
-            "format_score": breakdown.format if breakdown else "N/A",
-            "structure_score": breakdown.structure if breakdown else "N/A",
-            "content_score": breakdown.content if breakdown else "N/A",
-            "length_score": breakdown.length if breakdown else "N/A",
-            "ats_issues": "\n".join(ats.issues if ats else []),
-            "jobs": jobs_text
-        })
+        result = chain.invoke(
+            {
+                "strengths": "\n".join(state.analysis.strengths),
+                "weaknesses": "\n".join(state.analysis.weaknesses),
+                "suggestions": "\n".join(state.analysis.suggestions),
+                "skills": ", ".join(state.analysis.skills_extracted),
+                "ats_score": ats.ats_score if ats else "N/A",
+                "format_score": breakdown.format if breakdown else "N/A",
+                "structure_score": breakdown.structure if breakdown else "N/A",
+                "content_score": breakdown.content if breakdown else "N/A",
+                "length_score": breakdown.length if breakdown else "N/A",
+                "ats_issues": "\n".join(ats.issues if ats else []),
+                "jobs": jobs_text,
+            }
+        )
 
         state.final_report = result
 

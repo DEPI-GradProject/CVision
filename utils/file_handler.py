@@ -39,8 +39,4 @@ def parse_cv_file(file_path: str, file_name: str) -> CVData:
     else:
         raise ValueError(f"Unsupported file type: .{file_type}. Use PDF or DOCX.")
 
-    return CVData(
-        raw_text=raw_text,
-        file_name=file_name,
-        file_type=file_type
-    )
+    return CVData(raw_text=raw_text, file_name=file_name, file_type=file_type)

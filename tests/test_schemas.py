@@ -18,9 +18,13 @@ def test_cv_metadata_defaults():
 
 def test_cv_data_with_metadata():
     meta = CVMetadata(
-        has_tables=False, has_images=False,
-        sections_found=[], sections_missing=[],
-        fonts_count=1, pages_count=1, length_pages=1.0,
+        has_tables=False,
+        has_images=False,
+        sections_found=[],
+        sections_missing=[],
+        fonts_count=1,
+        pages_count=1,
+        length_pages=1.0,
     )
     data = CVData(raw_text="test", file_name="resume.pdf", file_type="pdf", metadata=meta)
     assert data.file_type == "pdf"

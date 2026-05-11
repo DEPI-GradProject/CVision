@@ -19,9 +19,7 @@ _vectorstore = None
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        _embeddings = HuggingFaceEmbeddings(
-            model_name="BAAI/bge-small-en-v1.5"
-        )
+        _embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
     return _embeddings
 
 
@@ -53,9 +51,7 @@ def get_vectorstore():
     global _vectorstore
     if _vectorstore is None:
         if not os.path.exists(FAISS_DIR):
-            raise FileNotFoundError(
-                f"FAISS index not found at {FAISS_DIR}. Run ingest.py first."
-            )
+            raise FileNotFoundError(f"FAISS index not found at {FAISS_DIR}. Run ingest.py first.")
 
         integrity_ok = _verify_faiss_integrity()
 
@@ -86,11 +82,13 @@ def search_jobs(query: str, k: int = 5):
 
     jobs = []
     for doc in results:
-        jobs.append({
-            "title": doc.metadata["title"],
-            "link": doc.metadata["link"],
-            "price": doc.metadata["price"],
-            "skills": doc.metadata["skills"],
-        })
+        jobs.append(
+            {
+                "title": doc.metadata["title"],
+                "link": doc.metadata["link"],
+                "price": doc.metadata["price"],
+                "skills": doc.metadata["skills"],
+            }
+        )
 
     return jobs

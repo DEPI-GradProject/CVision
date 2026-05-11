@@ -43,21 +43,9 @@ workflow.add_node("report_builder", report_builder_node)
 
 workflow.set_entry_point("cv_parser")
 
-workflow.add_conditional_edges(
-    "cv_parser",
-    should_continue,
-    {"continue": "cv_analyzer", "end": END}
-)
-workflow.add_conditional_edges(
-    "cv_analyzer",
-    should_continue,
-    {"continue": "job_matcher", "end": END}
-)
-workflow.add_conditional_edges(
-    "job_matcher",
-    should_continue,
-    {"continue": "report_builder", "end": END}
-)
+workflow.add_conditional_edges("cv_parser", should_continue, {"continue": "cv_analyzer", "end": END})
+workflow.add_conditional_edges("cv_analyzer", should_continue, {"continue": "job_matcher", "end": END})
+workflow.add_conditional_edges("job_matcher", should_continue, {"continue": "report_builder", "end": END})
 workflow.add_edge("report_builder", END)
 
 graph = workflow.compile()

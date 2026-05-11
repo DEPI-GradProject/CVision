@@ -17,9 +17,7 @@ logger = logging.getLogger(__name__)
 engine = create_engine(settings.database_url_with_ssl)
 
 app = FastAPI(
-    title="CVision Core API",
-    description="Backend infrastructure for job data and CV processing",
-    version="1.1.0"
+    title="CVision Core API", description="Backend infrastructure for job data and CV processing", version="1.1.0"
 )
 
 app.add_middleware(
@@ -41,8 +39,8 @@ def get_latest_jobs(limit: int = 50):
     try:
         query = text("SELECT * FROM jobs_raw ORDER BY published_date DESC LIMIT :limit")
         df = pd.read_sql(query, engine, params={"limit": limit})
-        if 'published_date' in df.columns:
-            df['published_date'] = df['published_date'].astype(str)
+        if "published_date" in df.columns:
+            df["published_date"] = df["published_date"].astype(str)
         return {"status": "success", "data": df.to_dict(orient="records")}
     except Exception as e:
         logger.error("Failed to fetch latest jobs: %s", e)
@@ -92,10 +90,11 @@ async def analyze_cv(file: UploadFile = File(...)):
                 "status": "success",
                 "filename": file.filename,
                 "ats_score": result.analysis.ats_result.ats_score
-                if result.analysis and result.analysis.ats_result else None,
+                if result.analysis and result.analysis.ats_result
+                else None,
                 "skills_extracted": result.analysis.skills_extracted if result.analysis else [],
                 "job_matches": len(result.job_matches.matched_jobs) if result.job_matches else 0,
-                "report": result.final_report
+                "report": result.final_report,
             }
         finally:
             if os.path.exists(tmp_path):

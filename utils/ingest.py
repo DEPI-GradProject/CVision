@@ -1,7 +1,7 @@
 import hashlib
 import json
-import os
 import logging
+import os
 
 import pandas as pd
 from langchain_community.vectorstores import FAISS
@@ -10,9 +10,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 logger = logging.getLogger(__name__)
 
-embeddings = HuggingFaceEmbeddings(
-    model_name="BAAI/bge-small-en-v1.5"
-)
+embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
 
 def _compute_faiss_hash(faiss_dir: str) -> str:

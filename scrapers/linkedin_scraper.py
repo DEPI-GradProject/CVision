@@ -87,23 +87,23 @@ def scrape_linkedin_jobs(keyword, location=None):
     time.sleep(final_wait)
 
     logger.info("Extracting data...")
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-    job_cards = soup.find_all('div', class_='base-card')
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    job_cards = soup.find_all("div", class_="base-card")
     logger.info("Found %s job cards for %s. Saving to database...", len(job_cards), keyword)
 
     new_jobs_count = 0
     for card in job_cards:
         try:
-            title_tag = card.find('h3', class_='base-search-card__title')
-            link_tag = card.find('a', class_='base-card__full-link')
+            title_tag = card.find("h3", class_="base-search-card__title")
+            link_tag = card.find("a", class_="base-card__full-link")
 
             if not title_tag or not link_tag:
                 continue
 
             title = title_tag.text.strip()
-            link = link_tag['href'].split('?')[0]
+            link = link_tag["href"].split("?")[0]
 
-            company_tag = card.find('h4', class_='base-search-card__subtitle')
+            company_tag = card.find("h4", class_="base-search-card__subtitle")
             company = company_tag.text.strip() if company_tag else "Unknown"
             description = f"Company: {company}"
 
@@ -143,7 +143,7 @@ if __name__ == "__main__":
         "Flutter",
         "React",
         "Python Developer",
-        "UI UX Designer"
+        "UI UX Designer",
     ]
 
     for kw in tech_keywords:

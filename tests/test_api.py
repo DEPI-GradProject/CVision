@@ -1,8 +1,12 @@
+import os
+
 import pytest
 
 pytest.importorskip("sqlalchemy")
 pytest.importorskip("fastapi")
 pytest.importorskip("langgraph")
+
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 from fastapi.testclient import TestClient
 
