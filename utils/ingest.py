@@ -30,7 +30,7 @@ def load_csv_to_faiss(csv_path: str = "Data/jobs.csv"):
     print(f"Loading {len(documents)} jobs into FAISS...")
     
     vectorstore = FAISS.from_documents(documents, embeddings)
-    vectorstore.save_local("data/faiss_db")
+    vectorstore.save_local("Data/faiss_db")
     
     print("✅ Done! Jobs loaded into FAISS.")
 
