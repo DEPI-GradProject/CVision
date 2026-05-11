@@ -11,6 +11,7 @@ spacy
 pydantic
 pydantic-settings
 httpx
+alembic
 pymupdf
 langchain
 langchain-openai

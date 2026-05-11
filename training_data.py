@@ -29,8 +29,8 @@ try:
     print("Uploading to database table 'training_jobs'... This might take a minute ⏳")
 
     # --- 4. Upload to Database ---
-    # upload the combined dataframe to the 'training_jobs' table in the database, replacing it if it already exists
-    all_jobs_df.to_sql('training_jobs', engine, if_exists='replace', index=False)
+    # upload the combined dataframe to the 'training_jobs' table in the database
+    all_jobs_df.to_sql('training_jobs', engine, if_exists='append', index=False)
 
     print("\n✅ Success! All training data has been uploaded to the 'training_jobs' table.")
 
