@@ -1,5 +1,6 @@
 # agents/job_matcher.py
 
+import logging
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
@@ -7,6 +8,8 @@ from models.schemas import AgentState, Job, JobMatches
 from utils.retriever import search_jobs
 from dotenv import load_dotenv
 import json
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -83,7 +86,7 @@ def job_matcher_agent(state: AgentState) -> AgentState:
 
         # Step 1: Query Enhancement
         enhanced_query = query_chain.invoke({"skills": skills})
-        print(f"Enhanced Query: {enhanced_query}")
+        logger.info("Enhanced Query: %s", enhanced_query)
 
         # Step 2: Semantic Search with Enhanced Query
         raw_jobs = search_jobs(enhanced_query, k=10)
