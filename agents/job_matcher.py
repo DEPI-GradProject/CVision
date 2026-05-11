@@ -3,7 +3,7 @@
 import logging
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+from langchain_core.output_parsers import StrOutputParser
 from models.schemas import AgentState, Job, JobMatches
 from utils.retriever import search_jobs
 from dotenv import load_dotenv
@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-# سريع للـ Query Enhancement
+# Fast LLM for Query Enhancement
 llm_fast = ChatGroq(
     model="llama-3.1-8b-instant",
     temperature=0.1
 )
 
-# قوي للـ Match Scoring
+# Strong LLM for Match Scoring
 llm_strong = ChatGroq(
     model="llama-3.3-70b-versatile",
     temperature=0.1

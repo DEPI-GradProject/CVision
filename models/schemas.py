@@ -51,7 +51,7 @@ class Job(BaseModel):
 class JobMatches(BaseModel):
     matched_jobs: list[Job]
 
-# Agent State (الطريقة الأصلية الخاصة بك)
+# Agent State
 class AgentState(BaseModel):
     file_path: Optional[str] = None
     file_name: Optional[str] = None
