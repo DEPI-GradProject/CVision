@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
 # --- 1. Database Connection ---
@@ -39,8 +39,8 @@ def home():
 @app.get("/api/v1/jobs/latest")
 def get_latest_jobs(limit: int = 50):
     try:
-        query = f"SELECT * FROM jobs_raw ORDER BY published_date DESC LIMIT {limit}"
-        df = pd.read_sql(query, engine)
+        query = text("SELECT * FROM jobs_raw ORDER BY published_date DESC LIMIT :limit")
+        df = pd.read_sql(query, engine, params={"limit": limit})
         if 'published_date' in df.columns:
             df['published_date'] = df['published_date'].astype(str)
         return {"status": "success", "data": df.to_dict(orient="records")}
@@ -50,8 +50,8 @@ def get_latest_jobs(limit: int = 50):
 @app.get("/api/v1/jobs/training")
 def get_training_data(limit: int = 100):
     try:
-        query = f"SELECT * FROM training_jobs LIMIT {limit}"
-        df = pd.read_sql(query, engine)
+        query = text("SELECT * FROM training_jobs LIMIT :limit")
+        df = pd.read_sql(query, engine, params={"limit": limit})
         return {"status": "success", "data": df.to_dict(orient="records")}
     except Exception as e:
         return {"status": "error", "message": str(e)}
