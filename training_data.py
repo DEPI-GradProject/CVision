@@ -11,13 +11,15 @@ if "sslmode=" not in DATABASE_URL:
 
 engine = create_engine(DATABASE_URL)
 
-print("Reading Excel files from 'data' folder...")
+print("Reading Excel files from 'Data' folder...")
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Data")
 
 try:
     # --- 2. Read Data ---
-    freelancer_df = pd.read_excel("data/Freelancer_data.xlsx")
-    guru_df = pd.read_excel("data/Guru_data.xlsx")
-    upwork_df = pd.read_excel("data/UPWORK_data.xlsx")
+    freelancer_df = pd.read_excel(os.path.join(DATA_DIR, "Freelancer_data.xlsx"))
+    guru_df = pd.read_excel(os.path.join(DATA_DIR, "Guru_data.xlsx"))
+    upwork_df = pd.read_excel(os.path.join(DATA_DIR, "UPWork_data.xlsx"))
 
     # add a new column to identify the source platform for each job
     freelancer_df['platform_source'] = 'Freelancer'
