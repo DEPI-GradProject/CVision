@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     max_scrolls: int = 25
     final_wait_seconds: int = 30
 
+    faiss_allow_dangerous: bool = False
+
     @property
     def database_url_with_ssl(self) -> str:
         url = self.database_url
