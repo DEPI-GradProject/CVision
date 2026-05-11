@@ -1,11 +1,14 @@
+import logging
 import os
 import pandas as pd
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
-# --- 1. Database Connection ---
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 if "sslmode=" not in DATABASE_URL:
@@ -13,29 +16,26 @@ if "sslmode=" not in DATABASE_URL:
 
 engine = create_engine(DATABASE_URL)
 
-# --- 2. Create API App ---
 app = FastAPI(
     title="CVision Core API",
     description="Backend infrastructure for job data and CV processing",
     version="1.1.0"
 )
 
-# --- 3. CORS Configuration so the frontend can access this API without issues (you can adjust the allowed origins in production for better security) ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], #make any origin can access this API (you can specify your frontend URL here in production)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- 4. API Endpoints ---
 
 @app.get("/")
 def home():
-    return {"message": "CVision API is Online 🚀"}
+    return {"message": "CVision API is Online"}
 
-# the path for this endpoint is /api/v1/jobs/latest and it accepts an optional query parameter 'limit' to specify how many of the latest jobs to return (default is 50 if not provided). It fetches the latest jobs from the 'jobs_raw' table in the database, ordered by published_date in descending order, and returns them as a JSON response. If there's an error during the database query, it returns an error message instead.
+
 @app.get("/api/v1/jobs/latest")
 def get_latest_jobs(limit: int = 50):
     try:
@@ -45,8 +45,10 @@ def get_latest_jobs(limit: int = 50):
             df['published_date'] = df['published_date'].astype(str)
         return {"status": "success", "data": df.to_dict(orient="records")}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
-# the path for this endpoint is /api/v1/jobs/training and it also accepts an optional 'limit' query parameter to specify how many training job records to return (default is 100). It queries the 'training_jobs' table in the database, retrieves the specified number of records, and returns them as a JSON response. If there's an error during the database query, it returns an error message instead.
+        logger.error("Failed to fetch latest jobs: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/v1/jobs/training")
 def get_training_data(limit: int = 100):
     try:
@@ -54,22 +56,35 @@ def get_training_data(limit: int = 100):
         df = pd.read_sql(query, engine, params={"limit": limit})
         return {"status": "success", "data": df.to_dict(orient="records")}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logger.error("Failed to fetch training data: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-# path for this endpoint is /api/v1/analyze-cv and it accepts a POST request with a file upload (specifically a PDF file). The endpoint is designed to receive the CV file from the user, and it's where your AI Matcher will eventually be integrated to analyze the CV against the job data. For now, it simply returns a success message confirming that the CV file was received, along with the filename and a note that the AI Matcher is ready for integration. If there's an error during file reception, it returns an error message instead.
 @app.post("/api/v1/analyze-cv")
 async def analyze_cv(file: UploadFile = File(...)):
-    """
-    here we receive the PDF file from the user.
-    your AI colleague will integrate their agents here.
-    """
+    ALLOWED_EXTENSIONS = {"pdf", "docx"}
+    ext = file.filename.split(".")[-1].lower() if file.filename else ""
+
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: .{ext}. Use PDF or DOCX.")
+
     try:
-        # temporarily return a success message
+        contents = await file.read()
+        file_size = len(contents)
+        MAX_SIZE = 10 * 1024 * 1024
+        if file_size > MAX_SIZE:
+            raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
+
+        logger.info("CV received: %s (%s bytes)", file.filename, file_size)
+
         return {
             "status": "success",
             "filename": file.filename,
+            "size_bytes": file_size,
             "message": "CV file received. AI Matcher is ready for integration."
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logger.error("Error processing CV upload: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
