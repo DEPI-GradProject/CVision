@@ -5,20 +5,15 @@ import pandas as pd
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
-from dotenv import load_dotenv
 
+from config import settings
 from graph.workflow import graph
 from models.schemas import AgentState
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
-if "sslmode=" not in DATABASE_URL:
-    DATABASE_URL += "?sslmode=require"
-
-engine = create_engine(DATABASE_URL)
+engine = create_engine(settings.database_url_with_ssl)
 
 app = FastAPI(
     title="CVision Core API",

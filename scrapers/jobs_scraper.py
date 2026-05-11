@@ -1,21 +1,15 @@
 import logging
 import requests
-import os
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from db_setup import RawJob
 from datetime import datetime
+from config import settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
-if "sslmode=" not in DATABASE_URL:
-    DATABASE_URL += "?sslmode=require"
-
-engine = create_engine(DATABASE_URL)
+engine = create_engine(settings.database_url_with_ssl)
 Session = sessionmaker(bind=engine)
 session = Session()
 

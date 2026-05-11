@@ -7,10 +7,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from models.schemas import AgentState, AnalysisResult, ATSResult, ATSBreakdown
-from dotenv import load_dotenv
 import json
-
-load_dotenv()
 
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",

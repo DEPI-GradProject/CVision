@@ -9,6 +9,8 @@ pdfplumber
 python-docx
 spacy
 pydantic
+pydantic-settings
+httpx
 pymupdf
 langchain
 langchain-openai

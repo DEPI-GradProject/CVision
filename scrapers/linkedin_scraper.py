@@ -1,8 +1,6 @@
 import logging
 import time
-import os
 from datetime import datetime
-from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -10,16 +8,12 @@ from selenium.webdriver.common.by import By
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from db_setup import RawJob
+from config import settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
-if "sslmode=" not in DATABASE_URL:
-    DATABASE_URL += "?sslmode=require"
-
-engine = create_engine(DATABASE_URL)
+engine = create_engine(settings.database_url_with_ssl)
 Session = sessionmaker(bind=engine)
 session = Session()
 
@@ -27,9 +21,8 @@ session = Session()
 def setup_driver():
     chrome_options = Options()
 
-    browser_path = os.getenv("CHROME_BROWSER_PATH")
-    if browser_path:
-        chrome_options.binary_location = browser_path
+    if settings.chrome_browser_path:
+        chrome_options.binary_location = settings.chrome_browser_path
 
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
@@ -42,7 +35,7 @@ def setup_driver():
 
 
 def scrape_linkedin_jobs(keyword, location=None):
-    location = location or os.getenv("LINKEDIN_LOCATION", "Egypt")
+    location = location or settings.linkedin_location
     logger.info("=" * 50)
     logger.info("[%s] Starting Scraper...", keyword)
     logger.info("=" * 50)
@@ -52,8 +45,8 @@ def scrape_linkedin_jobs(keyword, location=None):
     search_url = f"https://www.linkedin.com/jobs/search?keywords={keyword.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
     driver.get(search_url)
 
-    scroll_pause = int(os.getenv("SCROLL_PAUSE_SECONDS", "5"))
-    max_scrolls = int(os.getenv("MAX_SCROLLS", "25"))
+    scroll_pause = settings.scroll_pause_seconds
+    max_scrolls = settings.max_scrolls
 
     logger.info("Waiting 10 seconds for initial page load...")
     time.sleep(10)
@@ -85,7 +78,7 @@ def scrape_linkedin_jobs(keyword, location=None):
                 break
         last_height = new_height
 
-    final_wait = int(os.getenv("FINAL_WAIT_SECONDS", "30"))
+    final_wait = settings.final_wait_seconds
     logger.info("Scrolling done! Waiting %s seconds for rendering...", final_wait)
     time.sleep(final_wait)
 

@@ -1,24 +1,13 @@
 # db_setup.py
-import os
-from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import declarative_base
 
-# Load environment variables from .env file
-load_dotenv()
+from config import settings
 
-# Get database connection string
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
+if not settings.database_url:
     raise ValueError("DATABASE_URL is missing. Please check your .env file.")
 
-# Create the SQLAlchemy engine
-# Supabase sometimes requires sslmode=require for remote connections
-if "sslmode=" not in DATABASE_URL:
-    DATABASE_URL += "?sslmode=require"
-
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(settings.database_url_with_ssl, echo=True)
 
 # Define the declarative base
 Base = declarative_base()

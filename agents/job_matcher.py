@@ -6,12 +6,9 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from models.schemas import AgentState, Job, JobMatches
 from utils.retriever import search_jobs
-from dotenv import load_dotenv
 import json
 
 logger = logging.getLogger(__name__)
-
-load_dotenv()
 
 # Fast LLM for Query Enhancement
 llm_fast = ChatGroq(

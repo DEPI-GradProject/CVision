@@ -1,22 +1,16 @@
 import os
 import pandas as pd
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
-# --- 1. Database Connection ---
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
-if "sslmode=" not in DATABASE_URL:
-    DATABASE_URL += "?sslmode=require"
+from config import settings
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(settings.database_url_with_ssl)
 
 print("Reading Excel files from 'Data' folder...")
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Data")
 
 try:
-    # --- 2. Read Data ---
     freelancer_df = pd.read_excel(os.path.join(DATA_DIR, "Freelancer_data.xlsx"))
     guru_df = pd.read_excel(os.path.join(DATA_DIR, "Guru_data.xlsx"))
     upwork_df = pd.read_excel(os.path.join(DATA_DIR, "UPWork_data.xlsx"))
