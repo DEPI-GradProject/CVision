@@ -2,7 +2,7 @@
 
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+from langchain_core.output_parsers import StrOutputParser
 from models.schemas import AgentState, Job, JobMatches
 from utils.retriever import search_jobs
 from dotenv import load_dotenv
@@ -25,12 +25,18 @@ llm_strong = ChatGroq(
 # Query Enhancement Prompt
 query_prompt = PromptTemplate.from_template("""
 You are a job search expert.
-Convert the candidate's skills into a rich semantic search query for finding relevant jobs.
+Convert the candidate's profile into a rich semantic search query for finding relevant jobs.
 
-Candidate Skills: {skills}
+Candidate Profile:
+- Skills: {skills}
+- Years of Experience: {years_of_experience}
+- Experience Level: {experience_level}
+- Target Job Title: {target_job_title}
 
 Rules:
 - Expand skills into related job titles and technologies
+- Include the experience level in the query
+- Include the target job title
 - Add relevant industry terms
 - Keep it under 30 words
 - Return the enhanced query only, no explanation
@@ -42,18 +48,25 @@ query_chain = query_prompt | llm_fast | StrOutputParser()
 
 # Match Scoring Prompt
 match_prompt = PromptTemplate.from_template("""
-You are a job matching expert.
+You are a job matching expert. Use this exact scoring rubric:
+- 40% Skills match
+- 30% Years of experience match
+- 20% Job title match
+- 10% Industry match
 
-Candidate Skills: {skills}
+Candidate Profile:
+- Skills: {skills}
+- Years of Experience: {years_of_experience}
+- Experience Level: {experience_level}
+- Target Job Title: {target_job_title}
 
 Jobs Found:
 {jobs}
 
-For each job calculate:
-- match_score (0-100): how well the candidate fits
+For each job calculate match_score using the rubric above and provide:
 - matched_skills: skills the candidate has that match the job
 - missing_skills: skills required but candidate doesn't have
-- reason: one sentence why this job fits
+- reason: one sentence explaining the score based on the rubric
 
 Return JSON only, no extra text:
 {{
@@ -65,7 +78,7 @@ Return JSON only, no extra text:
       "match_score": 85,
       "matched_skills": ["Python", "FastAPI"],
       "missing_skills": ["Docker"],
-      "reason": "Great fit because..."
+      "reason": "80% match: skills align perfectly, but requires 2 years experience while candidate has 1 year"
     }}
   ]
 }}
@@ -79,13 +92,22 @@ def job_matcher_agent(state: AgentState) -> AgentState:
             state.error = "No analysis found, run cv_analyzer first"
             return state
 
-        skills = ", ".join(state.analysis.skills_extracted)
+        analysis = state.analysis
+        skills = ", ".join(analysis.skills_extracted)
+        years_of_experience = analysis.years_of_experience or 0
+        experience_level = analysis.experience_level or "Junior"
+        target_job_title = analysis.target_job_title or ""
 
         # Step 1: Query Enhancement
-        enhanced_query = query_chain.invoke({"skills": skills})
+        enhanced_query = query_chain.invoke({
+            "skills": skills,
+            "years_of_experience": years_of_experience,
+            "experience_level": experience_level,
+            "target_job_title": target_job_title
+        })
         print(f"Enhanced Query: {enhanced_query}")
 
-        # Step 2: Semantic Search with Enhanced Query
+        # Step 2: Semantic Search
         raw_jobs = search_jobs(enhanced_query, k=10)
 
         jobs_text = ""
@@ -95,9 +117,12 @@ def job_matcher_agent(state: AgentState) -> AgentState:
             jobs_text += f"Link: {job['link']}\n"
             jobs_text += "---\n"
 
-        # Step 3: Match Scoring
+        # Step 3: Match Scoring with Rubric
         result = match_chain.invoke({
             "skills": skills,
+            "years_of_experience": years_of_experience,
+            "experience_level": experience_level,
+            "target_job_title": target_job_title,
             "jobs": jobs_text
         })
 

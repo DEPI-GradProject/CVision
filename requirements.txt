@@ -31,3 +31,5 @@ langchain-chroma
 langchain-huggingface
 langchain-huggingface
 faiss-cpu
+rank-bm25
+sentence-transformers

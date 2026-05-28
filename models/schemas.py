@@ -1,9 +1,6 @@
-# models/schemas.py
-
 from pydantic import BaseModel
 from typing import Optional
 
-# CV Parser Output
 class CVMetadata(BaseModel):
     has_tables: bool
     has_images: bool
@@ -19,7 +16,6 @@ class CVData(BaseModel):
     file_type: str
     metadata: Optional[CVMetadata] = None
 
-# CV Analyzer Output
 class ATSBreakdown(BaseModel):
     format: int
     structure: int
@@ -37,8 +33,10 @@ class AnalysisResult(BaseModel):
     suggestions: list[str]
     skills_extracted: list[str]
     ats_result: Optional[ATSResult] = None
+    years_of_experience: Optional[float] = None
+    experience_level: Optional[str] = None
+    target_job_title: Optional[str] = None
 
-# Job Matcher Output
 class Job(BaseModel):
     title: str
     link: str
@@ -51,7 +49,6 @@ class Job(BaseModel):
 class JobMatches(BaseModel):
     matched_jobs: list[Job]
 
-# Agent State (الطريقة الأصلية الخاصة بك)
 class AgentState(BaseModel):
     file_path: Optional[str] = None
     file_name: Optional[str] = None

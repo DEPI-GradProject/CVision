@@ -13,71 +13,69 @@ llm = ChatGroq(
     temperature=0.3
 )
 
-parser = StrOutputParser()
-
 prompt = PromptTemplate(
     template="""
-You are a professional career advisor writing a comprehensive career report.
+You are a professional career advisor writing a personalized career report.
+
+== CANDIDATE PROFILE ==
+Experience Level: {experience_level}
+Years of Experience: {years_of_experience} years
+Target Job Title: {target_job_title}
 
 == CV ANALYSIS ==
-Strengths:
-{strengths}
-
-Weaknesses:
-{weaknesses}
-
-Suggestions:
-{suggestions}
-
-Skills Found:
-{skills}
+Strengths: {strengths}
+Weaknesses: {weaknesses}
+Suggestions: {suggestions}
+Skills Found: {skills}
 
 == ATS SCORE ==
 Overall ATS Score: {ats_score}/100
-- Format Score: {format_score}/100
-- Structure Score: {structure_score}/100
-- Content Score: {content_score}/100
-- Length Score: {length_score}/100
-
-ATS Issues:
-{ats_issues}
+- Format: {format_score}/100
+- Structure: {structure_score}/100
+- Content: {content_score}/100
+- Length: {length_score}/100
+ATS Issues: {ats_issues}
 
 == TOP JOB MATCHES ==
 {jobs}
 
-Write a professional career report with these sections:
+Write a highly personalized career report for a {experience_level} level candidate targeting {target_job_title} roles with {years_of_experience} years of experience.
+
+Include these sections:
 
 1. EXECUTIVE SUMMARY
-   Brief overview of the candidate's profile and ATS score interpretation.
+   Write a personalized 3-4 sentence summary specific to this candidate's level and target role.
+   Mention their experience level, key strengths, and ATS score interpretation.
 
 2. STRENGTHS
-   Highlight the strong points found in the CV.
+   Highlight strong points relevant to {target_job_title} roles.
 
 3. AREAS FOR IMPROVEMENT
-   Address weaknesses and ATS issues clearly.
+   Address weaknesses and ATS issues specific to their level.
 
 4. ATS OPTIMIZATION TIPS
-   Specific actions to improve the ATS score based on the issues found.
+   Specific actions to improve the ATS score.
 
 5. TOP JOB MATCHES
-   For each job explain:
-   - Why it's a good fit (matched skills)
-   - What skills to develop (missing skills)
-   - Match score interpretation
+   For each job:
+   - Match score and why
+   - Matched vs missing skills
+   - Whether the role fits their {experience_level} level
 
 6. ACTION PLAN
-   3-5 concrete next steps the candidate should take.
+   3-5 concrete next steps tailored to a {experience_level} targeting {target_job_title}.
 
-Be specific, encouraging, and professional.
+Be specific, encouraging, and personalized. Avoid generic advice.
 """,
     input_variables=[
+        "experience_level", "years_of_experience", "target_job_title",
         "strengths", "weaknesses", "suggestions", "skills",
         "ats_score", "format_score", "structure_score", "content_score", "length_score",
         "ats_issues", "jobs"
     ]
 )
 
-chain = prompt | llm | parser
+chain = prompt | llm | StrOutputParser()
 
 def report_builder_agent(state: AgentState) -> AgentState:
     try:
@@ -89,7 +87,8 @@ def report_builder_agent(state: AgentState) -> AgentState:
             state.error = "No job matches found, run job_matcher first"
             return state
 
-        ats = state.analysis.ats_result
+        analysis = state.analysis
+        ats = analysis.ats_result
         breakdown = ats.breakdown if ats else None
 
         jobs_text = ""
@@ -102,10 +101,13 @@ def report_builder_agent(state: AgentState) -> AgentState:
             jobs_text += f"  Link: {job.link}\n\n"
 
         result = chain.invoke({
-            "strengths": "\n".join(state.analysis.strengths),
-            "weaknesses": "\n".join(state.analysis.weaknesses),
-            "suggestions": "\n".join(state.analysis.suggestions),
-            "skills": ", ".join(state.analysis.skills_extracted),
+            "experience_level": analysis.experience_level or "Junior",
+            "years_of_experience": analysis.years_of_experience or 0,
+            "target_job_title": analysis.target_job_title or "Software Developer",
+            "strengths": "\n".join(analysis.strengths),
+            "weaknesses": "\n".join(analysis.weaknesses),
+            "suggestions": "\n".join(analysis.suggestions),
+            "skills": ", ".join(analysis.skills_extracted),
             "ats_score": ats.ats_score if ats else "N/A",
             "format_score": breakdown.format if breakdown else "N/A",
             "structure_score": breakdown.structure if breakdown else "N/A",
