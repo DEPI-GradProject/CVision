@@ -49,3 +49,7 @@ Desktop.ini
 
 # Large/generated artifacts (project-specific)
 Data/faiss_db/
+data/faiss_db/
+**/faiss_db/
+**/faiss_db/*.faiss
+**/faiss_db/*.pkl
