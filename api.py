@@ -6,16 +6,19 @@ import tempfile
 
 import pandas as pd
 import sentry_sdk
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, EmailStr
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy import create_engine, text
 
+from auth import auth_backend, current_active_user, fastapi_users
 from config import settings
 from graph.workflow import graph
+from models.db_models import User
 from models.schemas import AgentState
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -47,6 +50,44 @@ if settings.sentry_dsn:
 limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+class UserRead(BaseModel):
+    id: int
+    email: str
+    is_active: bool = True
+    is_superuser: bool = False
+    is_verified: bool = False
+
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    is_active: bool | None = None
+    is_superuser: bool | None = None
+    is_verified: bool | None = None
+    password: str | None = None
+
+
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_users_router(UserRead, UserUpdate),
+    prefix="/auth",
+    tags=["auth"],
+)
 
 
 @app.get("/")
@@ -89,13 +130,13 @@ def get_training_data(request: Request, limit: int = 100):
         df = pd.read_sql(query, engine, params={"limit": limit})
         return {"status": "success", "data": df.to_dict(orient="records")}
     except Exception as e:
-        logger.error("Failed to fetch training data: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to fetch training data: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/v1/analyze-cv")
 @limiter.limit("5/minute")
-async def analyze_cv(request: Request, file: UploadFile = File(...)):
+async def analyze_cv(request: Request, file: UploadFile = File(...), user: User = Depends(current_active_user)):
     allowed_extensions = {"pdf", "docx"}
     ext = file.filename.split(".")[-1].lower() if file.filename else ""
 
