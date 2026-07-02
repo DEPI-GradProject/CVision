@@ -29,3 +29,11 @@ export interface AnalysisHistory {
   skills_extracted: string[]
   created_at: string
 }
+
+export interface User {
+  id: number
+  email: string
+  is_active: boolean
+  is_superuser: boolean
+  is_verified: boolean
+}
