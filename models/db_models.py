@@ -1,7 +1,16 @@
-from sqlalchemy import Column, DateTime, Integer, String, Text
-from sqlalchemy.orm import declarative_base
+from typing import Annotated
 
-Base = declarative_base()
+from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
+from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
+
+int_pk = Annotated[int, mapped_column(Integer, primary_key=True)]
+
+
+class Base(DeclarativeBase):
+    @declared_attr.directive
+    def __tablename__(self) -> str:
+        return self.__name__.lower()
 
 
 class RawJob(Base):
@@ -31,3 +40,8 @@ class TrainingJob(Base):
 
     def __repr__(self):
         return f"<TrainingJob(title='{self.Title}')>"
+
+
+class User(SQLAlchemyBaseUserTable[int], Base):
+    __tablename__ = "users"
+    id: Mapped[int_pk]
