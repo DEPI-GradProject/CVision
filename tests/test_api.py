@@ -25,11 +25,33 @@ def test_home_endpoint():
 def test_latest_jobs_fails_without_db():
     response = client.get("/api/v1/jobs/latest?limit=5")
     assert response.status_code == 500
+    assert response.json()["detail"] == "Internal server error"
 
 
 def test_training_data_fails_without_db():
     response = client.get("/api/v1/jobs/training?limit=5")
     assert response.status_code == 500
+    assert response.json()["detail"] == "Internal server error"
+
+
+def test_auth_login_route_exists():
+    response = client.post("/auth/login")
+    assert response.status_code == 422
+
+
+def test_auth_register_route_exists():
+    response = client.post("/auth/register", json={})
+    assert response.status_code == 422
+
+
+def test_auth_me_requires_auth():
+    response = client.get("/auth/me")
+    assert response.status_code == 401
+
+
+def test_protected_analyze_cv_requires_auth():
+    response = client.post("/api/v1/analyze-cv")
+    assert response.status_code == 403
 
 
 def test_analyze_cv_no_file():
