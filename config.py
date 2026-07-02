@@ -21,9 +21,21 @@ class Settings(BaseSettings):
     faiss_allow_dangerous: bool = False
     sentry_dsn: str = ""
 
+    auth_jwt_secret: str = ""
+    auth_jwt_lifetime_seconds: int = 3600
+
     @property
     def database_url_with_ssl(self) -> str:
         url = self.database_url
+        if url and "sslmode=" not in url:
+            url += "?sslmode=require"
+        return url
+
+    @property
+    def database_url_async(self) -> str:
+        url = self.database_url
+        if url.startswith("postgresql://"):
+            url = "postgresql+asyncpg://" + url[len("postgresql://") :]
         if url and "sslmode=" not in url:
             url += "?sslmode=require"
         return url
