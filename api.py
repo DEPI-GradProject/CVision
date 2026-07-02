@@ -118,8 +118,8 @@ def get_latest_jobs(request: Request, limit: int = 50):
             df["published_date"] = df["published_date"].astype(str)
         return {"status": "success", "data": df.to_dict(orient="records")}
     except Exception as e:
-        logger.error("Failed to fetch latest jobs: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to fetch latest jobs: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/v1/jobs/training")
@@ -180,8 +180,8 @@ async def analyze_cv(request: Request, file: UploadFile = File(...), user: User 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error processing CV: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error processing CV: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 def _run_pipeline(file_path: str, file_name: str):
@@ -223,7 +223,7 @@ def _run_pipeline(file_path: str, file_name: str):
 
 @app.post("/api/v1/analyze-cv/stream")
 @limiter.limit("5/minute")
-async def analyze_cv_stream(request: Request, file: UploadFile = File(...)):
+async def analyze_cv_stream(request: Request, file: UploadFile = File(...), user: User = Depends(current_active_user)):
     allowed_extensions = {"pdf", "docx"}
     ext = file.filename.split(".")[-1].lower() if file.filename else ""
 
