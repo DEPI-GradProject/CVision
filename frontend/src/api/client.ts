@@ -1,4 +1,19 @@
-const API_BASE = '/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+const API_BASE = `${API_BASE_URL}/api/v1`
+
+let _token: string | null = null
+
+export function setAuthToken(token: string | null) {
+  _token = token
+}
+
+export function getAuthToken(): string | null {
+  return _token
+}
+
+function authHeaders(): Record<string, string> {
+  return _token ? { Authorization: `Bearer ${_token}` } : {}
+}
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -21,11 +36,41 @@ export const api = {
     return handleResponse<{ status: string; database: string }>(res)
   },
 
+  login: async (email: string, password: string) => {
+    const form = new URLSearchParams()
+    form.append('username', email)
+    form.append('password', password)
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form,
+    })
+    const data = await handleResponse<{ access_token: string; token_type: string }>(res)
+    return data
+  },
+
+  register: async (email: string, password: string) => {
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    return handleResponse<{ id: number; email: string; is_active: boolean; is_superuser: boolean; is_verified: boolean }>(res)
+  },
+
+  me: async () => {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      headers: { ...authHeaders() },
+    })
+    return handleResponse<{ id: number; email: string; is_active: boolean; is_superuser: boolean; is_verified: boolean }>(res)
+  },
+
   analyzeCV: async (file: File) => {
     const form = new FormData()
     form.append('file', file)
     const res = await fetch(`${API_BASE}/analyze-cv`, {
       method: 'POST',
+      headers: { ...authHeaders() },
       body: form,
     })
     return handleResponse<{
@@ -45,6 +90,7 @@ export const api = {
 
     fetch(`${API_BASE}/analyze-cv/stream`, {
       method: 'POST',
+      headers: { ...authHeaders() },
       body: form,
       signal: controller.signal,
     }).then(async (res) => {
