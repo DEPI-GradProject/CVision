@@ -17,22 +17,8 @@ import { ScrollReveal } from '@/components/ScrollReveal'
 import { StatSkeleton, ListItemSkeleton } from '@/components/Skeleton'
 import { cn } from '@/lib/utils'
 import { staggerContainer, staggerItem, staggerList, staggerListItem } from '@/lib/animations'
-import type { AnalysisHistory } from '@/types'
-
-const mockHistory: AnalysisHistory[] = [
-  { id: '1', filename: 'software_engineer_resume.pdf', ats_score: 85, skills_extracted: ['React', 'TypeScript', 'Python', 'AWS', 'Docker'], created_at: new Date(Date.now() - 86400000).toISOString() },
-  { id: '2', filename: 'product_manager_cv.docx', ats_score: 72, skills_extracted: ['Product Strategy', 'Agile', 'SQL', 'A/B Testing', 'Roadmapping'], created_at: new Date(Date.now() - 172800000).toISOString() },
-  { id: '3', filename: 'data_scientist_resume.pdf', ats_score: 91, skills_extracted: ['Python', 'TensorFlow', 'PyTorch', 'SQL', 'Statistics', 'MLOps'], created_at: new Date(Date.now() - 259200000).toISOString() },
-  { id: '4', filename: 'frontend_developer_cv.docx', ats_score: 68, skills_extracted: ['JavaScript', 'TypeScript', 'React', 'CSS', 'Tailwind', 'Next.js'], created_at: new Date(Date.now() - 432000000).toISOString() },
-  { id: '5', filename: 'devops_engineer_resume.pdf', ats_score: 79, skills_extracted: ['Docker', 'Kubernetes', 'AWS', 'Terraform', 'CI/CD'], created_at: new Date(Date.now() - 604800000).toISOString() },
-]
-
-const statDefs = [
-  { label: 'CVs Analyzed', value: '12', icon: FileText, color: 'text-primary bg-primary-muted' },
-  { label: 'Average Score', value: '79', icon: BarChart3, color: 'text-emerald-400 bg-emerald-500/10' },
-  { label: 'Jobs Matched', value: '47', icon: TrendingUp, color: 'text-amber-400 bg-amber-500/10' },
-  { label: 'Last Analysis', value: '2h ago', icon: Clock, color: 'text-purple-400 bg-purple-500/10' },
-]
+import { api, ApiError } from '@/api/client'
+import type { AnalysisHistory, DashboardStats } from '@/types'
 
 function CountUp({ value, duration = 1000 }: { value: string; duration?: number }) {
   const num = parseInt(value)
@@ -77,18 +63,45 @@ function CountUp({ value, duration = 1000 }: { value: string; duration?: number 
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const [history] = useState<AnalysisHistory[]>(mockHistory)
+  const [history, setHistory] = useState<AnalysisHistory[]>([])
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 800)
-    return () => clearTimeout(t)
-  }, [])
+    let cancelled = false
+    async function load() {
+      try {
+        const [histRes, statsRes] = await Promise.all([api.getHistory(50), api.getStats()])
+        if (cancelled) return
+        setHistory(histRes.data)
+        setStats(statsRes.data)
+      } catch (err) {
+        if (cancelled) return
+        if (err instanceof ApiError && err.status === 401) {
+          navigate('/login')
+          return
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [navigate])
 
   const filtered = history.filter((h) =>
     h.filename.toLowerCase().includes(search.toLowerCase()),
   )
+
+  const statDefs = stats
+    ? [
+        { label: 'CVs Analyzed', value: String(stats.total_analyses), icon: FileText, color: 'text-primary bg-primary-muted' },
+        { label: 'Average Score', value: String(stats.average_score), icon: BarChart3, color: 'text-emerald-400 bg-emerald-500/10' },
+        { label: 'Jobs Matched', value: String(stats.total_job_matches), icon: TrendingUp, color: 'text-amber-400 bg-amber-500/10' },
+        { label: 'Last Analysis', value: stats.last_analysis, icon: Clock, color: 'text-purple-400 bg-purple-500/10' },
+      ]
+    : []
 
   return (
     <AnimatedPage>

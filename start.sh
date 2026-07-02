@@ -19,4 +19,10 @@ with engine.connect() as conn:
 done
 
 alembic upgrade head
+
+if [ ! -d "Data/faiss_db" ]; then
+    echo "Building FAISS index..."
+    python utils/ingest.py
+fi
+
 exec uvicorn api:app --host 0.0.0.0 --port 8000

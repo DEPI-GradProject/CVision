@@ -23,11 +23,19 @@ export interface Job {
 }
 
 export interface AnalysisHistory {
-  id: string
+  id: number
   filename: string
   ats_score: number | null
   skills_extracted: string[]
+  job_matches: number | null
   created_at: string
+}
+
+export interface DashboardStats {
+  total_analyses: number
+  average_score: number
+  total_job_matches: number
+  last_analysis: string
 }
 
 export interface User {

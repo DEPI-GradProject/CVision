@@ -1,12 +1,34 @@
 services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: cvision
+      POSTGRES_USER: cvision
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cvision}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cvision -d cvision"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   api:
     build: .
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cvision:${POSTGRES_PASSWORD:-cvision}@db:5432/cvision
     volumes:
       - ./Data:/app/Data
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
@@ -26,3 +48,6 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import tempfile
+from datetime import UTC, datetime
 
 import pandas as pd
 import sentry_sdk
@@ -14,17 +15,19 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 
 from auth import auth_backend, current_active_user, fastapi_users
 from config import settings
 from graph.workflow import graph
-from models.db_models import User
+from models.db_models import AnalysisHistory, User
 from models.schemas import AgentState
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 engine = create_engine(settings.database_url_with_ssl)
+SessionLocal = sessionmaker(bind=engine)
 
 app = FastAPI(
     title="CVision Core API", description="Backend infrastructure for job data and CV processing", version="0.2.0"
@@ -71,6 +74,26 @@ class UserUpdate(BaseModel):
     is_superuser: bool | None = None
     is_verified: bool | None = None
     password: str | None = None
+
+
+def _save_analysis(user_id: int, filename: str, ats_score: int | None, skills: list[str], job_matches: int):
+    db = SessionLocal()
+    try:
+        record = AnalysisHistory(
+            user_id=user_id,
+            filename=filename,
+            ats_score=ats_score,
+            skills_extracted=json.dumps(skills),
+            job_matches=job_matches,
+            created_at=datetime.now(UTC),
+        )
+        db.add(record)
+        db.commit()
+    except Exception as e:
+        logger.error("Failed to save analysis history: %s", e)
+        db.rollback()
+    finally:
+        db.close()
 
 
 app.include_router(
@@ -134,6 +157,79 @@ def get_training_data(request: Request, limit: int = 100):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@app.get("/api/v1/history")
+@limiter.limit("30/minute")
+def get_analysis_history(request: Request, user: User = Depends(current_active_user), limit: int = 50):
+    try:
+        db = SessionLocal()
+        try:
+            records = (
+                db.query(AnalysisHistory)
+                .filter(AnalysisHistory.user_id == user.id)
+                .order_by(AnalysisHistory.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+            data = []
+            for r in records:
+                data.append(
+                    {
+                        "id": r.id,
+                        "filename": r.filename,
+                        "ats_score": r.ats_score,
+                        "skills_extracted": json.loads(r.skills_extracted) if r.skills_extracted else [],
+                        "job_matches": r.job_matches,
+                        "created_at": r.created_at.isoformat(),
+                    }
+                )
+            return {"status": "success", "data": data}
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error("Failed to fetch analysis history: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/api/v1/stats")
+@limiter.limit("30/minute")
+def get_analysis_stats(request: Request, user: User = Depends(current_active_user)):
+    try:
+        db = SessionLocal()
+        try:
+            records = db.query(AnalysisHistory).filter(AnalysisHistory.user_id == user.id).all()
+            total = len(records)
+            scores = [r.ats_score for r in records if r.ats_score is not None]
+            avg_score = round(sum(scores) / len(scores)) if scores else 0
+            total_matches = sum(r.job_matches or 0 for r in records)
+            last = max((r.created_at for r in records), default=None)
+
+            if last:
+                delta = datetime.now(UTC) - last
+                if delta.days > 0:
+                    last_str = f"{delta.days}d ago"
+                elif delta.seconds // 3600 > 0:
+                    last_str = f"{delta.seconds // 3600}h ago"
+                else:
+                    last_str = f"{delta.seconds // 60}m ago"
+            else:
+                last_str = "N/A"
+
+            return {
+                "status": "success",
+                "data": {
+                    "total_analyses": total,
+                    "average_score": avg_score,
+                    "total_job_matches": total_matches,
+                    "last_analysis": last_str,
+                },
+            }
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error("Failed to fetch stats: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 @app.post("/api/v1/analyze-cv")
 @limiter.limit("5/minute")
 async def analyze_cv(request: Request, file: UploadFile = File(...), user: User = Depends(current_active_user)):
@@ -163,14 +259,17 @@ async def analyze_cv(request: Request, file: UploadFile = File(...), user: User 
             if result.error:
                 raise HTTPException(status_code=500, detail=result.error)
 
+            ats_score = result.analysis.ats_result.ats_score if result.analysis and result.analysis.ats_result else None
+            skills = result.analysis.skills_extracted if result.analysis else []
+            job_matches = len(result.job_matches.matched_jobs) if result.job_matches else 0
+            _save_analysis(user.id, file.filename, ats_score, skills, job_matches)
+
             return {
                 "status": "success",
                 "filename": file.filename,
-                "ats_score": result.analysis.ats_result.ats_score
-                if result.analysis and result.analysis.ats_result
-                else None,
-                "skills_extracted": result.analysis.skills_extracted if result.analysis else [],
-                "job_matches": len(result.job_matches.matched_jobs) if result.job_matches else 0,
+                "ats_score": ats_score,
+                "skills_extracted": skills,
+                "job_matches": job_matches,
                 "report": result.final_report,
             }
         finally:
@@ -184,7 +283,7 @@ async def analyze_cv(request: Request, file: UploadFile = File(...), user: User 
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-def _run_pipeline(file_path: str, file_name: str):
+def _run_pipeline(file_path: str, file_name: str, user_id: int | None = None):
     try:
         state = AgentState(file_path=file_path, file_name=file_name)
 
@@ -200,16 +299,21 @@ def _run_pipeline(file_path: str, file_name: str):
             yield f"data: {json.dumps({'step': 'error', 'error': result.error})}\n\n"
             return
 
+        ats_score = result.analysis.ats_result.ats_score if result.analysis and result.analysis.ats_result else None
+        skills = result.analysis.skills_extracted if result.analysis else []
+        job_matches = len(result.job_matches.matched_jobs) if result.job_matches else 0
+
+        if user_id is not None:
+            _save_analysis(user_id, file_name, ats_score, skills, job_matches)
+
         payload = json.dumps(
             {
                 "step": "complete",
                 "result": {
                     "filename": file_name,
-                    "ats_score": result.analysis.ats_result.ats_score
-                    if result.analysis and result.analysis.ats_result
-                    else None,
-                    "skills_extracted": result.analysis.skills_extracted if result.analysis else [],
-                    "job_matches": len(result.job_matches.matched_jobs) if result.job_matches else 0,
+                    "ats_score": ats_score,
+                    "skills_extracted": skills,
+                    "job_matches": job_matches,
                     "report": result.final_report,
                 },
             }
@@ -245,7 +349,7 @@ async def analyze_cv_stream(request: Request, file: UploadFile = File(...), user
     async def event_generator():
         try:
             loop = asyncio.get_event_loop()
-            for event in await loop.run_in_executor(None, _run_pipeline, tmp_path, file.filename):
+            for event in await loop.run_in_executor(None, _run_pipeline, tmp_path, file.filename, user.id):
                 yield event
         finally:
             if os.path.exists(tmp_path):

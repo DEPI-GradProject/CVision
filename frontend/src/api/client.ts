@@ -139,4 +139,36 @@ export const api = {
     const res = await fetch(`${API_BASE}/jobs/latest?limit=${limit}`)
     return handleResponse<{ status: string; data: any[] }>(res)
   },
+
+  getHistory: async (limit = 50) => {
+    const res = await fetch(`${API_BASE}/history?limit=${limit}`, {
+      headers: { ...authHeaders() },
+    })
+    return handleResponse<{
+      status: string
+      data: Array<{
+        id: number
+        filename: string
+        ats_score: number | null
+        skills_extracted: string[]
+        job_matches: number | null
+        created_at: string
+      }>
+    }>(res)
+  },
+
+  getStats: async () => {
+    const res = await fetch(`${API_BASE}/stats`, {
+      headers: { ...authHeaders() },
+    })
+    return handleResponse<{
+      status: string
+      data: {
+        total_analyses: number
+        average_score: number
+        total_job_matches: number
+        last_analysis: string
+      }
+    }>(res)
+  },
 }

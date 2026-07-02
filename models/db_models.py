@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 
 int_pk = Annotated[int, mapped_column(Integer, primary_key=True)]
@@ -40,6 +40,21 @@ class TrainingJob(Base):
 
     def __repr__(self):
         return f"<TrainingJob(title='{self.Title}')>"
+
+
+class AnalysisHistory(Base):
+    __tablename__ = "analysis_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    filename = Column(String(255), nullable=False)
+    ats_score = Column(Integer, nullable=True)
+    skills_extracted = Column(Text, nullable=True)
+    job_matches = Column(Integer, nullable=True)
+    created_at = Column(DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<AnalysisHistory(id={self.id}, filename='{self.filename}', score={self.ats_score})>"
 
 
 class User(SQLAlchemyBaseUserTable[int], Base):
