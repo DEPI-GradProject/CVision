@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   AlertCircle,
   ArrowLeft,
@@ -23,7 +23,7 @@ import { ScrollReveal } from '@/components/ScrollReveal'
 import { AnimatedPage } from '@/components/AnimatedPage'
 import { useToast } from '@/components/Toast'
 import { cn } from '@/lib/utils'
-import { staggerContainer, staggerItem, staggerList, staggerListItem } from '@/lib/animations'
+import { staggerContainer, staggerItem } from '@/lib/animations'
 import type { CVAnalysisResult, SSEEvent } from '@/types'
 
 const stepLabels: Record<string, string> = {
@@ -500,7 +500,7 @@ export function AnalysisPage() {
                         </div>
                         <Progress
                           value={item.value}
-                          variant={result.ats_score >= 70 ? 'success' : result.ats_score >= 50 ? 'warning' : 'error'}
+                          variant={result.ats_score != null && result.ats_score >= 70 ? 'success' : result.ats_score != null && result.ats_score >= 50 ? 'warning' : 'error'}
                         />
                       </motion.div>
                     ))}

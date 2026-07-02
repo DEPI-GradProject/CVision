@@ -5,7 +5,6 @@ import {
   BarChart3,
   Clock,
   FileText,
-  Loader2,
   Search,
   Sparkles,
   TrendingUp,
@@ -232,7 +231,7 @@ export function DashboardPage() {
                         </div>
                         <div className="hidden items-center gap-3 sm:flex">
                           <motion.div className="flex -space-x-1" variants={staggerContainer}>
-                            {item.skills_extracted.slice(0, 3).map((s, i) => (
+                            {item.skills_extracted.slice(0, 3).map((s) => (
                               <motion.div key={s} variants={staggerItem}>
                                 <Badge key={s} variant="outline" className="px-2 py-0.5 text-xs">
                                   {s}

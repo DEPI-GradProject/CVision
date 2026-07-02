@@ -12,14 +12,12 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { CardContent } from '@/components/ui/card'
 import { ScrollReveal } from '@/components/ScrollReveal'
 import { AnimatedPage } from '@/components/AnimatedPage'
 import {
-  fadeInUp,
   staggerContainer,
   staggerItem,
-  scaleIn,
   cardHover,
 } from '@/lib/animations'
 

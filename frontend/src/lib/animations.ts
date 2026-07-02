@@ -62,7 +62,7 @@ export const cardHover = {
     scale: 1.02,
     borderColor: 'var(--color-primary)',
     boxShadow: '0 0 30px rgba(99, 102, 241, 0.15)',
-    transition: { duration: 0.2, ease: 'easeOut' },
+    transition: { duration: 0.2, ease: 'easeOut' as const },
   },
 }
 
@@ -72,10 +72,10 @@ export const pageTransition = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -20 },
-  transition: { duration: 0.3, ease: 'easeOut' },
+  transition: { duration: 0.3, ease: 'easeOut' as const },
 }
 
-export const numberCount = (n: number) => ({
+export const numberCount = (_n: number) => ({
   initial: { opacity: 0, y: 20 },
   animate: {
     opacity: 1,
@@ -104,6 +104,6 @@ export const staggerListItem = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: { duration: 0.3, ease: 'easeOut' },
+    transition: { duration: 0.3, ease: 'easeOut' as const },
   },
 }
