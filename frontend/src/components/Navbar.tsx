@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
 import { ThemeToggleButton } from './ThemeProvider'
+import { useAuth } from '@/contexts/AuthContext'
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -15,6 +16,7 @@ const navLinks = [
 export function Navbar() {
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
+  const { isAuthenticated, user, logout } = useAuth()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -75,11 +77,27 @@ export function Navbar() {
 
         <div className="flex items-center gap-3">
           <ThemeToggleButton />
-          <Link to="/upload">
-            <Button variant="gradient" size="sm">
-              Upload CV
-            </Button>
-          </Link>
+          {isAuthenticated ? (
+            <div className="flex items-center gap-2">
+              <span className="hidden text-sm text-text-secondary md:block">{user?.email}</span>
+              <Button variant="ghost" size="sm" onClick={logout}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link to="/login">
+                <Button variant="ghost" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button variant="gradient" size="sm">
+                  Sign Up
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </motion.nav>
