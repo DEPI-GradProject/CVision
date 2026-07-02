@@ -168,7 +168,7 @@ CVision/
 │   ├── __init__.py          # FastAPIUsers setup, JWT backend, dependencies
 │   ├── database.py          # Async SQLAlchemy engine (lazy init)
 │   ├── db.py                # get_user_db dependency
-│   └── auth_user_manager.py # UserManager hooks
+    │   └── __init__.py          # FastAPIUsers setup, JWT backend, UserManager
 ├── graph/                   # LangGraph workflow definition
 │   └── workflow.py          # StateGraph with 4 nodes + conditional edges
 ├── models/                  # Pydantic schemas + SQLAlchemy models

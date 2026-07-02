@@ -58,6 +58,16 @@ export const api = {
     return handleResponse<{ id: number; email: string; is_active: boolean; is_superuser: boolean; is_verified: boolean }>(res)
   },
 
+  logout: async () => {
+    const res = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: { ...authHeaders() },
+    })
+    if (!res.ok && res.status !== 401) {
+      throw new ApiError(res.status, 'Logout failed')
+    }
+  },
+
   me: async () => {
     const res = await fetch(`${API_BASE_URL}/auth/me`, {
       headers: { ...authHeaders() },

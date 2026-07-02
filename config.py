@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     final_wait_seconds: int = 30
 
     faiss_allow_dangerous: bool = False
+    faiss_index_path: str = "Data/faiss_db"
     sentry_dsn: str = ""
 
     auth_jwt_secret: str = ""

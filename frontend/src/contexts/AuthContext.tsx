@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import { api, setAuthToken, getAuthToken } from '@/api/client'
+import { useToast } from '@/components/Toast'
 
 interface User {
   id: number
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
     const saved = getAuthToken()
@@ -35,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .catch(() => {
           setToken(null)
           setAuthToken(null)
+          toast('Session expired. Please log in again.', 'error')
         })
         .finally(() => setIsLoading(false))
     } else {
@@ -55,7 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await login(email, password)
   }, [login])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await api.logout()
+    } catch {
+    }
     setAuthToken(null)
     setToken(null)
     setUser(null)

@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -77,8 +78,12 @@ def get_vectorstore():
 
 
 def search_jobs(query: str, k: int = 5):
+    sanitized = re.sub(r"[^\w\s\-.,;:!?()/@]", "", query)[:200]
+    if not sanitized.strip():
+        return []
+
     vectorstore = get_vectorstore()
-    results = vectorstore.similarity_search(query, k=k)
+    results = vectorstore.similarity_search(sanitized, k=k)
 
     jobs = []
     for doc in results:
