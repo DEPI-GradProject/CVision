@@ -256,7 +256,8 @@ async def analyze_cv(request: Request, file: UploadFile = File(...), user: User 
 
         try:
             state = AgentState(file_path=tmp_path, file_name=file.filename)
-            result = graph.invoke(state)
+            raw = graph.invoke(state)
+            result = AgentState(**raw) if isinstance(raw, dict) else raw
 
             if result.error:
                 raise HTTPException(status_code=500, detail=result.error)
@@ -285,27 +286,28 @@ async def analyze_cv(request: Request, file: UploadFile = File(...), user: User 
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+def _ensure_state(raw):
+    return AgentState(**raw) if isinstance(raw, dict) else raw
+
+
 def _run_pipeline(file_path: str, file_name: str, user_id: int | None = None):
     try:
         state = AgentState(file_path=file_path, file_name=file_name)
 
         for step_output in graph.stream(state):
             node_name = list(step_output.keys())[0]
-            step_output = step_output[node_name]
+            node_state = _ensure_state(step_output[node_name])
             step = node_name.removeprefix("cv_").removeprefix("_")
-            if step_output.get("error"):
-                yield f"data: {json.dumps({'step': 'error', 'error': step_output['error']})}\n\n"
+            if node_state.error:
+                yield f"data: {json.dumps({'step': 'error', 'error': node_state.error})}\n\n"
                 return
             yield f"data: {json.dumps({'step': step, 'status': 'complete'})}\n\n"
 
-        result = step_output
-        if result.error:
-            yield f"data: {json.dumps({'step': 'error', 'error': result.error})}\n\n"
-            return
-
-        ats_score = result.analysis.ats_result.ats_score if result.analysis and result.analysis.ats_result else None
-        skills = result.analysis.skills_extracted if result.analysis else []
-        job_matches = len(result.job_matches.matched_jobs) if result.job_matches else 0
+        ats_score = (
+            node_state.analysis.ats_result.ats_score if node_state.analysis and node_state.analysis.ats_result else None
+        )
+        skills = node_state.analysis.skills_extracted if node_state.analysis else []
+        job_matches = len(node_state.job_matches.matched_jobs) if node_state.job_matches else 0
 
         if user_id is not None:
             _save_analysis(user_id, file_name, ats_score, skills, job_matches)
@@ -318,7 +320,7 @@ def _run_pipeline(file_path: str, file_name: str, user_id: int | None = None):
                     "ats_score": ats_score,
                     "skills_extracted": skills,
                     "job_matches": job_matches,
-                    "report": result.final_report,
+                    "report": node_state.final_report,
                 },
             }
         )
