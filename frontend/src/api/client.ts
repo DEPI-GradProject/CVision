@@ -186,4 +186,32 @@ export const api = {
       }
     }>(res)
   },
+
+  matchJob: async (jobDescription: string, cvText: string) => {
+    const res = await fetch(`${API_BASE}/match-job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ job_description: jobDescription, cv_text: cvText }),
+    })
+    return handleResponse<{
+      match_score: number
+      matched_skills: string[]
+      missing_skills: string[]
+      improvement_tips: string[]
+    }>(res)
+  },
+
+  getMarketDemand: async () => {
+    const res = await fetch(`${API_BASE}/skills/market-demand`, {
+      headers: { ...authHeaders() },
+    })
+    return handleResponse<{
+      status: string
+      data: Array<{
+        skill: string
+        job_count: number
+        demand_level: string
+      }>
+    }>(res)
+  },
 }

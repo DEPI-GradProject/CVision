@@ -70,6 +70,24 @@ class JobMatches(BaseModel):
     matched_jobs: list[Job]
 
 
+class JobMatchRequest(BaseModel):
+    job_description: str
+    cv_text: str
+
+
+class JobMatchResult(BaseModel):
+    match_score: int
+    matched_skills: list[str]
+    missing_skills: list[str]
+    improvement_tips: list[str]
+
+
+class MarketSkill(BaseModel):
+    skill: str
+    job_count: int
+    demand_level: str  # "high", "medium", "low"
+
+
 # Agent State
 class AgentState(BaseModel):
     file_path: str | None = None

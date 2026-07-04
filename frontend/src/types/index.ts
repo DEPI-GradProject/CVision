@@ -45,3 +45,16 @@ export interface User {
   is_superuser: boolean
   is_verified: boolean
 }
+
+export interface JobMatchResult {
+  match_score: number
+  matched_skills: string[]
+  missing_skills: string[]
+  improvement_tips: string[]
+}
+
+export interface MarketSkill {
+  skill: string
+  job_count: number
+  demand_level: "high" | "medium" | "low"
+}

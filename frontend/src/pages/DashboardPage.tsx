@@ -8,7 +8,9 @@ import {
   Search,
   Sparkles,
   TrendingUp,
+  LineChart,
 } from 'lucide-react'
+import { LineChart as RechartsLine, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -156,6 +158,46 @@ export function DashboardPage() {
                 </motion.div>
               ))}
         </motion.div>
+
+        {history.length >= 2 && (
+          <ScrollReveal>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LineChart className="h-5 w-5 text-primary" />
+                  ATS Score Trend
+                </CardTitle>
+                <CardDescription>How your CV score has changed over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsLine
+                      data={[...history].reverse().map((h) => ({
+                        date: new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                        score: h.ats_score ?? 0,
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                      <XAxis dataKey="date" className="text-xs text-text-muted" tick={{ fill: 'currentColor' }} />
+                      <YAxis domain={[0, 100]} className="text-xs text-text-muted" tick={{ fill: 'currentColor' }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'var(--color-surface)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px',
+                          color: 'var(--color-text-primary)',
+                        }}
+                        formatter={(value: number) => [`${value}/100`, 'ATS Score']}
+                      />
+                      <Line type="monotone" dataKey="score" stroke="var(--color-primary)" strokeWidth={2} dot={{ fill: 'var(--color-primary)', r: 4 }} />
+                    </RechartsLine>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </ScrollReveal>
+        )}
 
         <ScrollReveal>
           <Card className="mb-6">

@@ -11,6 +11,9 @@ from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi_users.schemas import CreateUpdateDictModel
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
+from langchain_groq import ChatGroq
 from pydantic import BaseModel, EmailStr
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -22,7 +25,7 @@ from auth import auth_backend, current_active_user, fastapi_users
 from config import settings
 from graph.workflow import graph
 from models.db_models import AnalysisHistory, User
-from models.schemas import AgentState
+from models.schemas import AgentState, JobMatchRequest, JobMatchResult, MarketSkill
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -235,6 +238,126 @@ def get_analysis_stats(request: Request, user: User = Depends(current_active_use
     except Exception as e:
         logger.error("Failed to fetch stats: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+_match_llm = None
+
+
+def _get_match_llm():
+    global _match_llm
+    if _match_llm is None:
+        _match_llm = ChatGroq(model=settings.groq_model_large, temperature=0.1)
+    return _match_llm
+
+
+_match_prompt = PromptTemplate.from_template("""
+You are a job matching expert. Compare the candidate's CV with the job description.
+
+CV TEXT:
+{cv_text}
+
+JOB DESCRIPTION:
+{job_description}
+
+Analyze how well the candidate's skills and experience match this job.
+
+Return ONLY valid JSON (no markdown, no explanation):
+{{
+  "match_score": <0-100>,
+  "matched_skills": ["skill1", "skill2"],
+  "missing_skills": ["skill3", "skill4"],
+  "improvement_tips": ["tip1", "tip2", "tip3"]
+}}
+
+Rules:
+- match_score: percentage of job requirements the candidate meets
+- matched_skills: skills the candidate has that the job requires
+- missing_skills: skills the job requires but the candidate lacks
+- improvement_tips: 2-4 specific actions to improve fit
+""")
+
+
+@app.post("/api/v1/match-job")
+@limiter.limit("5/minute")
+def match_job(request: Request, body: JobMatchRequest, user: User = Depends(current_active_user)):
+    try:
+        llm = _get_match_llm()
+        chain = _match_prompt | llm | StrOutputParser()
+        result = chain.invoke({"cv_text": body.cv_text, "job_description": body.job_description})
+        clean = result.strip()
+        if "```json" in clean:
+            clean = clean.split("```json")[1].split("```")[0].strip()
+        elif "```" in clean:
+            clean = clean.split("```")[1].split("```")[0].strip()
+        data = json.loads(clean)
+        return JobMatchResult(**data)
+    except Exception as e:
+        logger.error("Match job error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to match job: " + str(e))
+
+
+@app.get("/api/v1/skills/market-demand")
+@limiter.limit("30/minute")
+def get_market_skill_demand(request: Request, user: User = Depends(current_active_user)):
+    try:
+        common_skills = [
+            "Python",
+            "SQL",
+            "JavaScript",
+            "TypeScript",
+            "React",
+            "Node.js",
+            "Java",
+            "C++",
+            "Docker",
+            "Kubernetes",
+            "AWS",
+            "Azure",
+            "GCP",
+            "Machine Learning",
+            "Deep Learning",
+            "NLP",
+            "Data Analysis",
+            "Data Science",
+            "Tableau",
+            "Power BI",
+            "Excel",
+            "Git",
+            "Linux",
+            "Flask",
+            "FastAPI",
+            "Django",
+            "PostgreSQL",
+            "MongoDB",
+            "Redis",
+            "REST API",
+            "GraphQL",
+            "CI/CD",
+            "TensorFlow",
+            "PyTorch",
+            "Scikit-learn",
+        ]
+        with engine.connect() as conn:
+            rows = []
+            for skill in common_skills:
+                like = f"%{skill}%"
+                r = conn.execute(
+                    text("SELECT COUNT(*) FROM jobs_raw WHERE description ILIKE :s"),
+                    {"s": like},
+                ).scalar()
+                if r and r > 0:
+                    if r >= 10:
+                        level = "high"
+                    elif r >= 3:
+                        level = "medium"
+                    else:
+                        level = "low"
+                    rows.append(MarketSkill(skill=skill, job_count=r, demand_level=level))
+        rows.sort(key=lambda x: x.job_count, reverse=True)
+        return {"status": "success", "data": rows}
+    except Exception as e:
+        logger.error("Market demand error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch market demand")
 
 
 @app.post("/api/v1/analyze-cv")

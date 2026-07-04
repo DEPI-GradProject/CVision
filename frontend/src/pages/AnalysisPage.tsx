@@ -13,6 +13,7 @@ import {
   Loader2,
   Sparkles,
   Target,
+  TrendingUp,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +25,7 @@ import { AnimatedPage } from '@/components/AnimatedPage'
 import { useToast } from '@/components/Toast'
 import { cn } from '@/lib/utils'
 import { staggerContainer, staggerItem } from '@/lib/animations'
-import type { CVAnalysisResult, SSEEvent } from '@/types'
+import type { CVAnalysisResult, SSEEvent, MarketSkill } from '@/types'
 
 const stepLabels: Record<string, string> = {
   parser: 'Parsing CV content...',
@@ -248,6 +249,57 @@ function SkillsCloud({ skills }: { skills: string[] }) {
   )
 }
 
+function SkillsGap({ skills }: { skills: string[] }) {
+  const [marketSkills, setMarketSkills] = useState<MarketSkill[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.getMarketDemand()
+      .then((res) => setMarketSkills(res.data.filter((s) => s.demand_level === 'high')))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const missing = marketSkills.filter((ms) => !skills.some((s) => s.toLowerCase().includes(ms.skill.toLowerCase())))
+
+  if (loading || missing.length === 0) return null
+
+  return (
+    <ScrollReveal>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <TrendingUp className="h-5 w-5 text-amber-400" />
+            Skills Gap Analysis
+          </CardTitle>
+          <CardDescription>High-demand skills missing from your CV</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {missing.slice(0, 8).map((ms) => (
+              <motion.div
+                key={ms.skill}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-error" />
+                  <span className="text-sm">{ms.skill}</span>
+                </div>
+                <Badge variant="warning" className="text-xs">{ms.job_count} jobs</Badge>
+              </motion.div>
+            ))}
+            {missing.length > 8 && (
+              <p className="text-center text-xs text-text-muted pt-2">+{missing.length - 8} more skills</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </ScrollReveal>
+  )
+}
+
 export function AnalysisPage() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -444,6 +496,8 @@ export function AnalysisPage() {
 
           <div className="space-y-6 lg:col-span-2">
             {result.skills_extracted.length > 0 && <SkillsCloud skills={result.skills_extracted} />}
+
+            {result.skills_extracted.length > 0 && <SkillsGap skills={result.skills_extracted} />}
 
             {result.report && (
               <ScrollReveal>
