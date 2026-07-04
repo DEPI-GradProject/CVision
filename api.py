@@ -10,6 +10,7 @@ import sentry_sdk
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi_users.schemas import CreateUpdateDictModel
 from pydantic import BaseModel, EmailStr
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -56,6 +57,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 class UserRead(BaseModel):
+    model_config = {"from_attributes": True}
     id: int
     email: str
     is_active: bool = True
@@ -63,7 +65,7 @@ class UserRead(BaseModel):
     is_verified: bool = False
 
 
-class UserCreate(BaseModel):
+class UserCreate(CreateUpdateDictModel):
     email: EmailStr
     password: str
 

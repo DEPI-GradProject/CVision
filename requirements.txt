@@ -33,5 +33,6 @@ sentry-sdk
 slowapi
 fastapi-users[sqlalchemy]
 asyncpg
+psycopg2-binary
 python-jose[cryptography]
 python-multipart
