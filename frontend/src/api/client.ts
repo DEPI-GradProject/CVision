@@ -1,18 +1,23 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 const API_BASE = `${API_BASE_URL}/api/v1`
 
-let _token: string | null = null
+const TOKEN_KEY = 'access_token'
 
 export function setAuthToken(token: string | null) {
-  _token = token
+  if (token) {
+    sessionStorage.setItem(TOKEN_KEY, token)
+  } else {
+    sessionStorage.removeItem(TOKEN_KEY)
+  }
 }
 
 export function getAuthToken(): string | null {
-  return _token
+  return sessionStorage.getItem(TOKEN_KEY)
 }
 
 function authHeaders(): Record<string, string> {
-  return _token ? { Authorization: `Bearer ${_token}` } : {}
+  const token = sessionStorage.getItem(TOKEN_KEY)
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 export class ApiError extends Error {

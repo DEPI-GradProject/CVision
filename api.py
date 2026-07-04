@@ -27,7 +27,12 @@ from models.schemas import AgentState
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-engine = create_engine(settings.database_url_with_ssl)
+engine = create_engine(
+    settings.database_url_with_ssl,
+    pool_pre_ping=True,
+    pool_recycle=300,
+    connect_args={"connect_timeout": 10},
+)
 SessionLocal = sessionmaker(bind=engine)
 
 app = FastAPI(
