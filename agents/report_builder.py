@@ -4,9 +4,10 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
 
+from config import settings
 from models.schemas import AgentState
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.3)
+llm = ChatGroq(model=settings.groq_model_large, temperature=0.3)
 
 parser = StrOutputParser()
 

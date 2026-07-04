@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     faiss_index_path: str = "Data/faiss_db"
     sentry_dsn: str = ""
 
+    groq_model_large: str = "llama-3.3-70b-versatile"
+    groq_model_fast: str = "llama-3.1-8b-instant"
+
     auth_jwt_secret: str = ""
     auth_jwt_lifetime_seconds: int = 3600
 

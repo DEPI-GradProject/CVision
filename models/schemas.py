@@ -1,7 +1,18 @@
 # models/schemas.py
 
 
-from pydantic import BaseModel
+from typing import Annotated
+
+from pydantic import BaseModel, BeforeValidator
+
+
+def _coerce_skills(v):
+    if isinstance(v, list):
+        return ", ".join(str(s) for s in v)
+    return v
+
+
+SkillsField = Annotated[str, BeforeValidator(_coerce_skills)]
 
 
 # CV Parser Output
@@ -48,7 +59,7 @@ class AnalysisResult(BaseModel):
 class Job(BaseModel):
     title: str
     link: str
-    skills: str
+    skills: SkillsField
     match_score: int | None = None
     matched_skills: list[str] | None = None
     missing_skills: list[str] | None = None

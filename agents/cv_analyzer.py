@@ -2,14 +2,14 @@
 
 import json
 
-from langchain_core.messages import HumanMessage
-from langchain_core.tools import tool
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
-from langgraph.prebuilt import create_react_agent
 
+from config import settings
 from models.schemas import AgentState, AnalysisResult, ATSBreakdown, ATSResult
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.3)
+llm = ChatGroq(model=settings.groq_model_large, temperature=0.3)
 
 STANDARD_FONTS = ["arial", "calibri", "times new roman", "helvetica", "georgia", "verdana", "tahoma", "trebuchet"]
 
@@ -51,15 +51,7 @@ PERSONAL_INFO_KEYWORDS = [
 ]
 
 
-@tool
-def ats_checker(metadata_json: str) -> str:
-    """
-    Calculate ATS score based on CV metadata.
-    Input: JSON string with cv metadata and cv text.
-    Output: JSON string with ats_score, breakdown, and issues.
-    """
-    data = json.loads(metadata_json)
-
+def compute_ats(data: dict) -> dict:
     has_tables = data.get("has_tables", False)
     has_images = data.get("has_images", False)
     fonts_count = data.get("fonts_count", 1)
@@ -69,7 +61,6 @@ def ats_checker(metadata_json: str) -> str:
 
     issues = []
 
-    # FORMAT SCORE (25%)
     format_score = 100
     if has_tables:
         format_score -= 30
@@ -85,7 +76,6 @@ def ats_checker(metadata_json: str) -> str:
         issues.append("Consider reducing fonts to 2")
     format_score = max(0, format_score)
 
-    # STRUCTURE SCORE (25%)
     structure_score = 100
     for section in REQUIRED_SECTIONS:
         if section not in sections_found:
@@ -96,16 +86,12 @@ def ats_checker(metadata_json: str) -> str:
     if not has_dates:
         structure_score -= 15
         issues.append("No clear dates found in experience or education")
-
     if "summary" not in sections_found and "objective" not in sections_found:
         structure_score -= 10
         issues.append("Missing Summary or Objective section")
-
     structure_score = max(0, structure_score)
 
-    # CONTENT SCORE (25%)
     content_score = 100
-
     action_verbs_found = sum(1 for verb in ACTION_VERBS if verb in cv_text)
     if action_verbs_found < 3:
         content_score -= 25
@@ -123,10 +109,8 @@ def ats_checker(metadata_json: str) -> str:
     if not has_numbers:
         content_score -= 15
         issues.append("No quantifiable achievements found - add numbers and percentages")
-
     content_score = max(0, content_score)
 
-    # LENGTH SCORE (25%)
     length_score = 100
     if pages_count < 1:
         length_score = 50
@@ -134,13 +118,11 @@ def ats_checker(metadata_json: str) -> str:
     elif pages_count > 2:
         length_score -= 30
         issues.append(f"CV is {pages_count} pages - keep it to maximum 2 pages")
-
     length_score = max(0, length_score)
 
-    # FINAL SCORE
     ats_score = int((format_score * 0.25) + (structure_score * 0.25) + (content_score * 0.25) + (length_score * 0.25))
 
-    result = {
+    return {
         "ats_score": ats_score,
         "breakdown": {
             "format": format_score,
@@ -151,11 +133,23 @@ def ats_checker(metadata_json: str) -> str:
         "issues": issues,
     }
 
-    return json.dumps(result)
 
+analysis_prompt = PromptTemplate.from_template("""
+You are a professional CV analyst. Analyze the following CV text and return JSON only.
 
-tools = [ats_checker]
-agent = create_react_agent(llm, tools)
+CV Text:
+{cv_text}
+
+Return JSON with this exact format (no extra text, no markdown):
+{{
+  "strengths": ["..."],
+  "weaknesses": ["..."],
+  "suggestions": ["..."],
+  "skills_extracted": ["..."]
+}}
+""")
+
+analysis_chain = analysis_prompt | llm | StrOutputParser()
 
 
 def cv_analyzer_agent(state: AgentState) -> AgentState:
@@ -165,7 +159,8 @@ def cv_analyzer_agent(state: AgentState) -> AgentState:
             return state
 
         metadata = state.cv_data.metadata
-        metadata_json = json.dumps(
+
+        ats_data = compute_ats(
             {
                 "has_tables": metadata.has_tables if metadata else False,
                 "has_images": metadata.has_images if metadata else False,
@@ -176,52 +171,9 @@ def cv_analyzer_agent(state: AgentState) -> AgentState:
             }
         )
 
-        result = agent.invoke(
-            {
-                "messages": [
-                    HumanMessage(
-                        content=f"""
-You are a professional CV analyst and ATS expert.
+        result = analysis_chain.invoke({"cv_text": state.cv_data.raw_text})
 
-You have two tasks:
-1. Use the ats_checker tool with this metadata to get the ATS score:
-{metadata_json}
-
-2. After getting the ATS score, analyze the CV text below and provide:
-- strengths: list of strong points
-- weaknesses: list of weak points
-- suggestions: list of actionable improvements
-- skills_extracted: list of all skills found
-
-CV Text:
-{state.cv_data.raw_text}
-
-Return your final answer as JSON with this exact format:
-{{
-  "strengths": [...],
-  "weaknesses": [...],
-  "suggestions": [...],
-  "skills_extracted": [...],
-  "ats_result": {{
-    "ats_score": 0,
-    "breakdown": {{
-      "format": 0,
-      "structure": 0,
-      "content": 0,
-      "length": 0
-    }},
-    "issues": [...]
-  }}
-}}
-"""
-                    )
-                ]
-            }
-        )
-
-        last_message = result["messages"][-1].content
-
-        clean = last_message
+        clean = result
         if "```json" in clean:
             clean = clean.split("```json")[1].split("```")[0].strip()
         elif "```" in clean:
@@ -229,8 +181,7 @@ Return your final answer as JSON with this exact format:
 
         parsed = json.loads(clean)
 
-        ats_data = parsed.get("ats_result", {})
-        breakdown_data = ats_data.get("breakdown", {})
+        breakdown_data = ats_data["breakdown"]
 
         state.analysis = AnalysisResult(
             strengths=parsed.get("strengths", []),
@@ -238,14 +189,14 @@ Return your final answer as JSON with this exact format:
             suggestions=parsed.get("suggestions", []),
             skills_extracted=parsed.get("skills_extracted", []),
             ats_result=ATSResult(
-                ats_score=ats_data.get("ats_score", 0),
+                ats_score=ats_data["ats_score"],
                 breakdown=ATSBreakdown(
-                    format=breakdown_data.get("format", 0),
-                    structure=breakdown_data.get("structure", 0),
-                    content=breakdown_data.get("content", 0),
-                    length=breakdown_data.get("length", 0),
+                    format=breakdown_data["format"],
+                    structure=breakdown_data["structure"],
+                    content=breakdown_data["content"],
+                    length=breakdown_data["length"],
                 ),
-                issues=ats_data.get("issues", []),
+                issues=ats_data["issues"],
             ),
         )
 

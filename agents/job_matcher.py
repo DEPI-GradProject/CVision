@@ -7,16 +7,17 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
 
+from config import settings
 from models.schemas import AgentState, Job, JobMatches
 from utils.retriever import search_jobs
 
 logger = logging.getLogger(__name__)
 
 # Fast LLM for Query Enhancement
-llm_fast = ChatGroq(model="llama-3.1-8b-instant", temperature=0.1)
+llm_fast = ChatGroq(model=settings.groq_model_fast, temperature=0.1)
 
 # Strong LLM for Match Scoring
-llm_strong = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.1)
+llm_strong = ChatGroq(model=settings.groq_model_large, temperature=0.1)
 
 # Query Enhancement Prompt
 query_prompt = PromptTemplate.from_template("""
