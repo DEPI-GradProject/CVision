@@ -35,7 +35,7 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     async def on_after_register(self, user: User, request: Request | None = None):
         logger.info("User %s (%s) registered", user.id, user.email)
 
-    async def on_after_login(self, user: User, request: Request | None = None):
+    async def on_after_login(self, user: User, request: Request | None = None, response=None):
         logger.info("User %s (%s) logged in", user.id, user.email)
 
 

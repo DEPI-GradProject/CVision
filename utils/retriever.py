@@ -3,6 +3,8 @@ import json
 import logging
 import os
 import re
+import shutil
+import tempfile
 
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -15,6 +17,29 @@ FAISS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 
 _embeddings = None
 _vectorstore = None
+_SAFE_FAISS_DIR = None
+
+
+def _get_safe_faiss_path() -> str:
+    global _SAFE_FAISS_DIR
+    if _SAFE_FAISS_DIR is not None:
+        return _SAFE_FAISS_DIR
+
+    try:
+        FAISS_DIR.encode("ascii")
+        _SAFE_FAISS_DIR = FAISS_DIR
+        return _SAFE_FAISS_DIR
+    except UnicodeEncodeError:
+        pass
+
+    safe_dir = os.path.join(tempfile.gettempdir(), "cv_faiss_cache")
+    if os.path.exists(safe_dir):
+        shutil.rmtree(safe_dir)
+
+    logger.info("Copying FAISS index from Unicode path to ASCII-safe path: %s", safe_dir)
+    shutil.copytree(FAISS_DIR, safe_dir)
+    _SAFE_FAISS_DIR = safe_dir
+    return _SAFE_FAISS_DIR
 
 
 def get_embeddings():
@@ -24,8 +49,10 @@ def get_embeddings():
     return _embeddings
 
 
-def _verify_faiss_integrity() -> bool:
-    hash_path = os.path.join(FAISS_DIR, ".faiss_hash")
+def _verify_faiss_integrity(faiss_dir: str | None = None) -> bool:
+    if faiss_dir is None:
+        faiss_dir = FAISS_DIR
+    hash_path = os.path.join(faiss_dir, ".faiss_hash")
     if not os.path.exists(hash_path):
         logger.warning("No FAISS hash file found at %s", hash_path)
         return False
@@ -37,7 +64,7 @@ def _verify_faiss_integrity() -> bool:
         return False
 
     hasher = hashlib.sha256()
-    for root, _dirs, files in os.walk(FAISS_DIR):
+    for root, _dirs, files in os.walk(faiss_dir):
         for fname in sorted(files):
             if fname == ".faiss_hash":
                 continue
@@ -51,10 +78,19 @@ def _verify_faiss_integrity() -> bool:
 def get_vectorstore():
     global _vectorstore
     if _vectorstore is None:
-        if not os.path.exists(FAISS_DIR):
-            raise FileNotFoundError(f"FAISS index not found at {FAISS_DIR}. Run ingest.py first.")
+        safe_path = _get_safe_faiss_path()
 
-        integrity_ok = _verify_faiss_integrity()
+        logger.info(
+            "Loading FAISS from: %s (exists: %s, files: %s)",
+            safe_path,
+            os.path.exists(os.path.join(safe_path, "index.faiss")),
+            os.listdir(safe_path) if os.path.exists(safe_path) else "N/A",
+        )
+
+        if not os.path.exists(os.path.join(safe_path, "index.faiss")):
+            raise FileNotFoundError(f"FAISS index not found at {safe_path}. Run ingest.py first.")
+
+        integrity_ok = _verify_faiss_integrity(safe_path)
 
         if not integrity_ok and not settings.faiss_allow_dangerous:
             raise RuntimeError(
@@ -70,7 +106,7 @@ def get_vectorstore():
             )
 
         _vectorstore = FAISS.load_local(
-            FAISS_DIR,
+            safe_path,
             get_embeddings(),
             allow_dangerous_deserialization=settings.faiss_allow_dangerous,
         )

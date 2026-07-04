@@ -7,7 +7,7 @@ from config import settings
 
 @lru_cache
 def get_async_engine():
-    return create_async_engine(settings.database_url_async, echo=False)
+    return create_async_engine(settings.database_url_async, echo=False, pool_pre_ping=True)
 
 
 @lru_cache

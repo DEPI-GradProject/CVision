@@ -70,7 +70,7 @@ class UserCreate(CreateUpdateDictModel):
     password: str
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(CreateUpdateDictModel):
     email: EmailStr | None = None
     is_active: bool | None = None
     is_superuser: bool | None = None
@@ -289,7 +289,9 @@ def _run_pipeline(file_path: str, file_name: str, user_id: int | None = None):
     try:
         state = AgentState(file_path=file_path, file_name=file_name)
 
-        for node_name, step_output in graph.stream(state):
+        for step_output in graph.stream(state):
+            node_name = list(step_output.keys())[0]
+            step_output = step_output[node_name]
             step = node_name.removeprefix("cv_").removeprefix("_")
             if step_output.get("error"):
                 yield f"data: {json.dumps({'step': 'error', 'error': step_output['error']})}\n\n"
@@ -351,7 +353,8 @@ async def analyze_cv_stream(request: Request, file: UploadFile = File(...), user
     async def event_generator():
         try:
             loop = asyncio.get_event_loop()
-            for event in await loop.run_in_executor(None, _run_pipeline, tmp_path, file.filename, user.id):
+            events = await loop.run_in_executor(None, list, _run_pipeline(tmp_path, file.filename, user.id))
+            for event in events:
                 yield event
         finally:
             if os.path.exists(tmp_path):
