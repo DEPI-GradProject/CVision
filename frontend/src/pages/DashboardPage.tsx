@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -9,6 +9,7 @@ import {
   Sparkles,
   TrendingUp,
   LineChart,
+  Loader2,
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip as ChartTooltip, Filler } from 'chart.js'
@@ -128,6 +129,21 @@ export function DashboardPage() {
           <motion.div variants={staggerItem}>
             <h1 className="text-3xl font-bold">Dashboard</h1>
             <p className="mt-1 text-text-secondary">Track your CV analysis history and stats</p>
+            {loading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-3 flex items-center gap-2 text-sm text-text-muted"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                >
+                  <Loader2 className="h-4 w-4 text-primary" />
+                </motion.div>
+                Loading your dashboard...
+              </motion.div>
+            )}
           </motion.div>
           <motion.div variants={staggerItem} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Link to="/upload">
