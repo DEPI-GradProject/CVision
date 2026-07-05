@@ -9,6 +9,7 @@ pytest.importorskip("fastapi")
 pytest.importorskip("langgraph")
 
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ["AUTH_JWT_SECRET"] = "test-secret-for-ci"
 
 from fastapi.testclient import TestClient
 from langchain_core.language_models.llms import LLM

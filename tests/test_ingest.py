@@ -26,12 +26,11 @@ def test_load_csv_to_faiss_creates_index(mock_embeddings):
         )
         df.to_csv(csv_path, index=False)
 
-        faiss_dir = os.path.join(tmpdir, "faiss_db")
-        os.makedirs(faiss_dir, exist_ok=True)
+        os.makedirs(os.path.join(tmpdir, "Data", "faiss_db"), exist_ok=True)
 
         with (
             patch("utils.ingest.FAISS") as mock_faiss_cls,
-            patch("utils.ingest.os.path.exists", return_value=True),
+            patch("os.getcwd", return_value=tmpdir),
         ):
             mock_faiss_cls.from_documents.return_value = mock_faiss
             mock_faiss.__class__.save_local = MagicMock()
@@ -52,7 +51,12 @@ def test_load_csv_to_faiss_empty_csv(mock_embeddings):
         csv_path = os.path.join(tmpdir, "empty.csv")
         pd.DataFrame(columns=["Title", "Link", "Price", "Skills"]).to_csv(csv_path, index=False)
 
-        with patch("utils.ingest.FAISS") as mock_faiss_cls:
+        os.makedirs(os.path.join(tmpdir, "Data", "faiss_db"), exist_ok=True)
+
+        with (
+            patch("utils.ingest.FAISS") as mock_faiss_cls,
+            patch("os.getcwd", return_value=tmpdir),
+        ):
             from utils.ingest import load_csv_to_faiss
 
             load_csv_to_faiss(csv_path)

@@ -70,6 +70,8 @@ jobs:
         run: docker build -t cvision-api .
       - name: Build Frontend image
         run: docker build -t cvision-frontend -f frontend/Dockerfile frontend/
+      - name: Prepare env file
+        run: cp .env.example .env
       - name: Start services
         run: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d api
       - name: Smoke test
