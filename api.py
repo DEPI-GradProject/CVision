@@ -10,7 +10,7 @@ import pandas as pd
 import sentry_sdk
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi_users.schemas import CreateUpdateDictModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -84,6 +84,27 @@ if settings.sentry_dsn:
 limiter = Limiter(key_func=_rate_limit_key, default_limits=["60/minute"])
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+_auth_limits: dict[str, list[float]] = {}
+_AUTH_WINDOW = 60.0
+_AUTH_MAX = 10
+
+
+@app.middleware("http")
+async def _auth_rate_limit_middleware(request: Request, call_next):
+    if request.url.path in ("/auth/login", "/auth/register"):
+        from time import time
+
+        key = _rate_limit_key(request)
+        now = time()
+        timestamps = _auth_limits.get(key, [])
+        timestamps = [t for t in timestamps if now - t < _AUTH_WINDOW]
+        if len(timestamps) >= _AUTH_MAX:
+            return JSONResponse(status_code=429, content={"detail": "Too many auth attempts. Try again later."})
+        timestamps.append(now)
+        _auth_limits[key] = timestamps
+    return await call_next(request)
 
 
 class UserRead(BaseModel):

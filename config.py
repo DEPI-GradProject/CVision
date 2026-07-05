@@ -33,16 +33,21 @@ class Settings(BaseSettings):
     @property
     def database_url_with_ssl(self) -> str:
         url = self.database_url
-        if url and "sslmode=" not in url:
+        if not url or url.startswith("sqlite"):
+            return url
+        if "sslmode=" not in url:
             url += "?sslmode=require"
         return url
 
     @property
     def database_url_async(self) -> str:
         url = self.database_url
+        if not url:
+            return url
+        if url.startswith("sqlite"):
+            return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
         if url.startswith("postgresql://"):
             url = "postgresql+asyncpg://" + url[len("postgresql://") :]
-        # asyncpg uses ssl=, not sslmode=; convert if the original URL had sslmode=
         url = url.replace("sslmode=require", "ssl=require")
         url = url.replace("sslmode=prefer", "ssl=prefer")
         url = url.replace("sslmode=disable", "ssl=disable")

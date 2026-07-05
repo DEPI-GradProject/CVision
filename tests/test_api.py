@@ -1,4 +1,5 @@
 import os
+from unittest.mock import Mock
 
 import pytest
 
@@ -11,8 +12,37 @@ os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 from fastapi.testclient import TestClient
 
 from api import app
+from auth import current_active_user
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _auth_override():
+    """Bypass real auth for tests that need it; auth-specific tests restore it."""
+    yield
+    app.dependency_overrides.clear()
+
+
+def _auth_headers():
+    """Register a user and return auth Bearer header."""
+    res = client.post("/auth/register", json={"email": "test@test.com", "password": "TestPass123!"})
+    if res.status_code == 422:
+        # user may already exist in a previous test
+        pass
+    res = client.post("/auth/login", data={"username": "test@test.com", "password": "TestPass123!"})
+    token = res.json().get("access_token", "")
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _mock_user():
+    user = Mock()
+    user.id = 1
+    user.email = "test@test.com"
+    user.is_active = True
+    user.is_superuser = False
+    user.is_verified = True
+    return user
 
 
 def test_home_endpoint():
@@ -51,15 +81,21 @@ def test_auth_me_requires_auth():
 
 def test_protected_analyze_cv_requires_auth():
     response = client.post("/api/v1/analyze-cv")
-    assert response.status_code == 403
+    assert response.status_code == 401
+
+
+def _with_auth_override():
+    app.dependency_overrides[current_active_user] = lambda: _mock_user()
 
 
 def test_analyze_cv_no_file():
+    _with_auth_override()
     response = client.post("/api/v1/analyze-cv")
     assert response.status_code == 422
 
 
 def test_analyze_cv_wrong_extension():
+    _with_auth_override()
     response = client.post(
         "/api/v1/analyze-cv",
         files={"file": ("test.txt", b"hello world", "text/plain")},
@@ -69,11 +105,13 @@ def test_analyze_cv_wrong_extension():
 
 
 def test_analyze_cv_stream_no_file():
+    _with_auth_override()
     response = client.post("/api/v1/analyze-cv/stream")
     assert response.status_code == 422
 
 
 def test_analyze_cv_stream_wrong_extension():
+    _with_auth_override()
     response = client.post(
         "/api/v1/analyze-cv/stream",
         files={"file": ("test.txt", b"hello world", "text/plain")},
@@ -83,6 +121,7 @@ def test_analyze_cv_stream_wrong_extension():
 
 
 def test_analyze_cv_stream_too_large():
+    _with_auth_override()
     response = client.post(
         "/api/v1/analyze-cv/stream",
         files={"file": ("test.pdf", b"x" * (11 * 1024 * 1024), "application/pdf")},
