@@ -609,32 +609,62 @@ export function AnalysisPage() {
                       <Target className="h-5 w-5 text-primary" />
                       Job Matches
                     </CardTitle>
+                    <CardDescription>{result.job_matches} positions found for your CV</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <motion.div
-                      className="text-center py-4"
-                      initial={{ opacity: 0, scale: 0.5 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.4, type: 'spring' }}
-                    >
-                      <motion.span
-                        className="text-4xl font-bold text-primary"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5, duration: 0.4 }}
+                  <CardContent className="space-y-3">
+                    {(result.matched_jobs || []).slice(0, 5).map((job, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="rounded-lg border border-border p-3 hover:border-primary/30 transition-colors"
                       >
-                        {result.job_matches}
-                      </motion.span>
-                      <p className="mt-1 text-sm text-text-secondary">positions found</p>
-                    </motion.div>
-                    <Link to="/dashboard">
-                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                        <Button variant="outline" size="sm" className="w-full mt-2 group">
-                          View all matches
-                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                        </Button>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <p className="text-sm font-medium">{job.job_title}</p>
+                          {job.faiss_score != null && (
+                            <Badge
+                              variant={job.faiss_score >= 80 ? 'success' : job.faiss_score >= 60 ? 'warning' : 'error'}
+                              className="shrink-0 text-xs"
+                            >
+                              {job.faiss_score}%
+                            </Badge>
+                          )}
+                        </div>
+                        {job.matched_skills && job.matched_skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-1.5">
+                            {job.matched_skills.slice(0, 4).map((s) => (
+                              <Badge key={s} variant="success" className="text-[10px] px-1.5 py-0">{s}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        {job.missing_skills && job.missing_skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-1.5">
+                            {job.missing_skills.slice(0, 4).map((s) => (
+                              <Badge key={s} variant="error" className="text-[10px] px-1.5 py-0">{s}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        {job.reason && (
+                          <p className="text-[11px] text-text-muted">{job.reason}</p>
+                        )}
+                        {job.job_link && (
+                          <a
+                            href={job.job_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline mt-1 inline-block"
+                          >
+                            View job →
+                          </a>
+                        )}
                       </motion.div>
-                    </Link>
+                    ))}
+                    {result.matched_jobs && result.matched_jobs.length > 5 && (
+                      <p className="text-center text-xs text-text-muted pt-1">
+                        +{result.matched_jobs.length - 5} more matches
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </ScrollReveal>

@@ -403,6 +403,11 @@ For each weak bullet point or section, provide:
 
 Focus on: action verbs, quantifiable achievements, specific technologies.
 
+IMPORTANT: Do NOT invent or fabricate any numbers, percentages, or metrics.
+If the original text has no numbers, the improved version should also have
+no invented numbers. Only use quantifiable achievements if they were
+already present in the original text.
+
 Return ONLY valid JSON (no markdown, no explanation):
 {{
   "overall_assessment": "2-3 sentence assessment of the CV",
@@ -569,7 +574,51 @@ async def analyze_cv(request: Request, file: UploadFile = File(...), user: User 
 
             ats_score = result.analysis.ats_result.ats_score if result.analysis and result.analysis.ats_result else None
             skills = result.analysis.skills_extracted if result.analysis else []
-            job_matches = len(result.job_matches.matched_jobs) if result.job_matches else 0
+
+            faiss_jobs = (
+                [
+                    {
+                        "title": j.title,
+                        "link": j.link,
+                        "match_score": j.match_score,
+                        "matched_skills": j.matched_skills or [],
+                        "missing_skills": j.missing_skills or [],
+                        "reason": j.reason,
+                    }
+                    for j in result.job_matches.matched_jobs
+                ]
+                if result.job_matches
+                else []
+            )
+
+            sql_jobs = _search_jobs_raw(skills)
+
+            seen = set()
+            for j in sql_jobs:
+                t = j.get("job_title", "").strip().lower()
+                if t and t not in seen:
+                    seen.add(t)
+
+            for j in faiss_jobs:
+                t = j["title"].strip().lower()
+                if t in seen:
+                    continue
+                seen.add(t)
+                sql_jobs.append(
+                    {
+                        "job_title": j["title"],
+                        "job_link": j["link"],
+                        "platform": "FAISS",
+                        "description": "",
+                        "faiss_score": j.get("match_score"),
+                        "matched_skills": j.get("matched_skills", []),
+                        "missing_skills": j.get("missing_skills", []),
+                        "reason": j.get("reason"),
+                    }
+                )
+
+            merged_jobs = sql_jobs[:10]
+            job_matches = len(merged_jobs)
             _save_analysis(user.id, file.filename, ats_score, skills, job_matches)
 
             return {
@@ -578,6 +627,7 @@ async def analyze_cv(request: Request, file: UploadFile = File(...), user: User 
                 "ats_score": ats_score,
                 "skills_extracted": skills,
                 "job_matches": job_matches,
+                "matched_jobs": merged_jobs,
                 "report": result.final_report,
             }
         finally:
@@ -589,6 +639,30 @@ async def analyze_cv(request: Request, file: UploadFile = File(...), user: User 
     except Exception as e:
         logger.error("Error processing CV: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+def _search_jobs_raw(skills: list[str], limit: int = 5) -> list[dict]:
+    if not skills:
+        return []
+    try:
+        conditions = []
+        for skill in skills[:5]:
+            escaped = skill.replace("'", "''")
+            conditions.append(f"description ILIKE '%{escaped}%' OR job_title ILIKE '%{escaped}%'")
+        skill_conditions = " OR ".join(conditions)
+        query = text(f"""
+            SELECT job_title, job_link, platform, description
+            FROM jobs_raw
+            WHERE {skill_conditions}
+            ORDER BY published_date DESC
+            LIMIT :limit
+        """)
+        df = pd.read_sql(query, engine, params={"limit": limit})
+        logger.info("jobs_raw SQL search: %s results for %s skills", len(df), len(skills))
+        return df.to_dict(orient="records")
+    except Exception as e:
+        logger.warning("jobs_raw search failed: %s", e)
+        return []
 
 
 def _ensure_state(raw):
@@ -612,7 +686,51 @@ def _run_pipeline(file_path: str, file_name: str, user_id: int | None = None):
             node_state.analysis.ats_result.ats_score if node_state.analysis and node_state.analysis.ats_result else None
         )
         skills = node_state.analysis.skills_extracted if node_state.analysis else []
-        job_matches = len(node_state.job_matches.matched_jobs) if node_state.job_matches else 0
+
+        faiss_jobs = (
+            [
+                {
+                    "title": j.title,
+                    "link": j.link,
+                    "match_score": j.match_score,
+                    "matched_skills": j.matched_skills or [],
+                    "missing_skills": j.missing_skills or [],
+                    "reason": j.reason,
+                }
+                for j in node_state.job_matches.matched_jobs
+            ]
+            if node_state.job_matches
+            else []
+        )
+
+        sql_jobs = _search_jobs_raw(skills)
+
+        seen = set()
+        for j in sql_jobs:
+            t = j.get("job_title", "").strip().lower()
+            if t and t not in seen:
+                seen.add(t)
+
+        for j in faiss_jobs:
+            t = j["title"].strip().lower()
+            if t in seen:
+                continue
+            seen.add(t)
+            sql_jobs.append(
+                {
+                    "job_title": j["title"],
+                    "job_link": j["link"],
+                    "platform": "FAISS",
+                    "description": "",
+                    "faiss_score": j.get("match_score"),
+                    "matched_skills": j.get("matched_skills", []),
+                    "missing_skills": j.get("missing_skills", []),
+                    "reason": j.get("reason"),
+                }
+            )
+
+        merged_jobs = sql_jobs[:10]
+        job_matches = len(merged_jobs)
 
         if user_id is not None:
             _save_analysis(user_id, file_name, ats_score, skills, job_matches)
@@ -625,6 +743,7 @@ def _run_pipeline(file_path: str, file_name: str, user_id: int | None = None):
                     "ats_score": ats_score,
                     "skills_extracted": skills,
                     "job_matches": job_matches,
+                    "matched_jobs": merged_jobs,
                     "report": node_state.final_report,
                 },
             }

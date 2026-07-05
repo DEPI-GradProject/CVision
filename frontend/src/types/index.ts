@@ -1,8 +1,20 @@
+export interface MatchedJob {
+  job_title: string
+  job_link: string
+  platform?: string
+  description?: string
+  faiss_score?: number | null
+  matched_skills?: string[]
+  missing_skills?: string[]
+  reason?: string | null
+}
+
 export interface CVAnalysisResult {
   filename: string
   ats_score: number | null
   skills_extracted: string[]
   job_matches: number
+  matched_jobs?: MatchedJob[]
   report: string | null
 }
 
