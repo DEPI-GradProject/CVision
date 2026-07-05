@@ -450,8 +450,11 @@ export function AnalysisPage() {
   const [step, setStep] = useState<string>('uploading')
   const [result, setResult] = useState<CVAnalysisResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [jobsPage, setJobsPage] = useState(0)
   const controllerRef = useRef<AbortController | null>(null)
   const { toast } = useToast()
+
+  useEffect(() => { setJobsPage(0) }, [result])
 
   const steps = ['parser', 'analyzer', 'analyzer_ats', 'matcher', 'reporter', 'complete']
 
@@ -592,59 +595,98 @@ export function AnalysisPage() {
                     <CardDescription>{result.job_matches} positions found for your CV</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {(result.matched_jobs || []).slice(0, 5).map((job, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
-                        className="rounded-2xl border border-border/50 p-4 hover:border-border/80 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <p className="text-sm font-medium">{job.job_title}</p>
-                          {job.faiss_score != null && (
-                            <Badge
-                              variant={job.faiss_score >= 80 ? 'success' : job.faiss_score >= 60 ? 'warning' : 'error'}
-                              className="shrink-0 rounded-full text-xs px-3"
+                    {(() => {
+                      const jobs = result.matched_jobs || []
+                      const perPage = 10
+                      const totalPages = Math.max(1, Math.ceil(jobs.length / perPage))
+                      const safePage = Math.min(jobsPage, totalPages - 1)
+                      const start = safePage * perPage
+                      const pageJobs = jobs.slice(start, start + perPage)
+                      return (
+                        <>
+                          {pageJobs.map((job, i) => (
+                            <motion.div
+                              key={start + i}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                              className="rounded-2xl border border-border/50 p-4 hover:border-border/80 transition-colors"
                             >
-                              {job.faiss_score}%
-                            </Badge>
+                              <div className="flex items-start justify-between gap-3 mb-2">
+                                <p className="text-sm font-medium">{job.job_title}</p>
+                                {job.faiss_score != null && (
+                                  <Badge
+                                    variant={job.faiss_score >= 80 ? 'success' : job.faiss_score >= 60 ? 'warning' : 'error'}
+                                    className="shrink-0 rounded-full text-xs px-3"
+                                  >
+                                    {job.faiss_score}%
+                                  </Badge>
+                                )}
+                              </div>
+                              {job.matched_skills && job.matched_skills.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-1.5">
+                                  {job.matched_skills.slice(0, 4).map((s) => (
+                                    <Badge key={s} variant="success" className="rounded-full text-[10px] px-2 py-0">{s}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {job.missing_skills && job.missing_skills.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-1.5">
+                                  {job.missing_skills.slice(0, 4).map((s) => (
+                                    <Badge key={s} variant="error" className="rounded-full text-[10px] px-2 py-0">{s}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {job.reason && (
+                                <p className="text-[11px] text-text-muted">{job.reason}</p>
+                              )}
+                              {job.job_link && (
+                                <a
+                                  href={job.job_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-primary hover:underline mt-1 inline-block"
+                                >
+                                  View job →
+                                </a>
+                              )}
+                            </motion.div>
+                          ))}
+                          {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-2 pt-2">
+                              <button
+                                onClick={() => setJobsPage((p) => Math.max(0, p - 1))}
+                                disabled={safePage === 0}
+                                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-border transition disabled:opacity-30 hover:border-primary/50"
+                              >
+                                Previous
+                              </button>
+                              {Array.from({ length: totalPages }, (_, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => setJobsPage(i)}
+                                  className={cn(
+                                    'w-8 h-8 text-xs font-medium rounded-lg border transition',
+                                    i === safePage
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-border hover:border-primary/50 text-text-muted',
+                                  )}
+                                >
+                                  {i + 1}
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => setJobsPage((p) => Math.min(totalPages - 1, p + 1))}
+                                disabled={safePage === totalPages - 1}
+                                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-border transition disabled:opacity-30 hover:border-primary/50"
+                              >
+                                Next
+                              </button>
+                            </div>
                           )}
-                        </div>
-                        {job.matched_skills && job.matched_skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-1.5">
-                            {job.matched_skills.slice(0, 4).map((s) => (
-                              <Badge key={s} variant="success" className="rounded-full text-[10px] px-2 py-0">{s}</Badge>
-                            ))}
-                          </div>
-                        )}
-                        {job.missing_skills && job.missing_skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-1.5">
-                            {job.missing_skills.slice(0, 4).map((s) => (
-                              <Badge key={s} variant="error" className="rounded-full text-[10px] px-2 py-0">{s}</Badge>
-                            ))}
-                          </div>
-                        )}
-                        {job.reason && (
-                          <p className="text-[11px] text-text-muted">{job.reason}</p>
-                        )}
-                        {job.job_link && (
-                          <a
-                            href={job.job_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline mt-1 inline-block"
-                          >
-                            View job →
-                          </a>
-                        )}
-                      </motion.div>
-                    ))}
-                    {result.matched_jobs && result.matched_jobs.length > 5 && (
-                      <p className="text-center text-xs text-text-muted pt-1">
-                        +{result.matched_jobs.length - 5} more matches
-                      </p>
-                    )}
+                        </>
+                      )
+                    })()}
                   </CardContent>
                 </Card>
               </SpringFade>
