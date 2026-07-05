@@ -70,3 +70,9 @@ jobs:
         run: docker build -t cvision-api .
       - name: Build Frontend image
         run: docker build -t cvision-frontend -f frontend/Dockerfile frontend/
+      - name: Start services
+        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d api
+      - name: Smoke test
+        run: |
+          sleep 5
+          curl -f --retry 10 --retry-delay 3 http://localhost:8000/api/v1/health
