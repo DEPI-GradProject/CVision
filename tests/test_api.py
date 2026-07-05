@@ -1,6 +1,6 @@
 import asyncio
 import os
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -11,6 +11,7 @@ pytest.importorskip("langgraph")
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 from fastapi.testclient import TestClient
+from langchain_core.language_models.llms import LLM
 
 from api import app
 from auth import current_active_user
@@ -22,20 +23,23 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session", autouse=True)
 def _create_tables():
-    """Create all tables on the in-memory SQLite before tests."""
+    """Create all tables on both sync and async in-memory SQLite before tests."""
+    from api import engine as _sync_engine
+
+    DBBase.metadata.create_all(_sync_engine)
 
     async def _init():
-        engine = get_async_engine()
-        async with engine.begin() as conn:
-            await conn.run_sync(DBBase.metadata.create_all)
+        _engine = get_async_engine()
+        async with _engine.begin() as _conn:
+            await _conn.run_sync(DBBase.metadata.create_all)
 
     asyncio.run(_init())
     yield
 
     async def _drop():
-        engine = get_async_engine()
-        async with engine.begin() as conn:
-            await conn.run_sync(DBBase.metadata.drop_all)
+        _engine = get_async_engine()
+        async with _engine.begin() as _conn:
+            await _conn.run_sync(DBBase.metadata.drop_all)
 
     asyncio.run(_drop())
 
@@ -75,16 +79,20 @@ def test_home_endpoint():
     assert data["message"] is not None
 
 
-def test_latest_jobs_fails_without_db():
+def test_latest_jobs_empty():
     response = client.get("/api/v1/jobs/latest?limit=5")
-    assert response.status_code == 500
-    assert response.json()["detail"] == "Internal server error"
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["data"] == []
 
 
-def test_training_data_fails_without_db():
+def test_training_data_empty():
     response = client.get("/api/v1/jobs/training?limit=5")
-    assert response.status_code == 500
-    assert response.json()["detail"] == "Internal server error"
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["data"] == []
 
 
 def test_auth_login_route_exists():
@@ -216,9 +224,55 @@ def test_history_requires_auth():
     assert response.status_code == 401
 
 
+def test_history_empty():
+    _with_auth_override()
+    response = client.get("/api/v1/history")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["data"] == []
+
+
 def test_stats_requires_auth():
     response = client.get("/api/v1/stats")
     assert response.status_code == 401
+
+
+def test_stats_empty():
+    _with_auth_override()
+    response = client.get("/api/v1/stats")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["data"]["total_analyses"] == 0
+
+
+def _mock_llm_response(json_str: str):
+    """Patch _get_match_llm so match-job endpoint returns controlled data."""
+    mock_llm = Mock(spec=LLM)
+    mock_llm.invoke.return_value = json_str
+    patcher = patch("api._get_match_llm", return_value=mock_llm)
+    patcher.start()
+    return patcher
+
+
+def test_match_job_success():
+    _with_auth_override()
+    patcher = _mock_llm_response(
+        '{"match_score": 75, "matched_skills": ["python", "ml"],'
+        ' "missing_skills": ["docker"],'
+        ' "improvement_tips": ["Learn Docker", "Add cloud"],'
+        ' "keyword_coverage": 0.6}'
+    )
+    try:
+        response = client.post(
+            "/api/v1/match-job",
+            json={"cv_text": "Experienced Python developer", "job_description": "Looking for Python dev with ML"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["match_score"] == 75
+        assert "python" in data["matched_skills"]
+    finally:
+        patcher.stop()
 
 
 def test_match_job_requires_auth():
@@ -229,6 +283,26 @@ def test_match_job_requires_auth():
 def test_match_job_file_requires_auth():
     response = client.post("/api/v1/match-job/file")
     assert response.status_code == 401
+
+
+def test_match_job_file_wrong_extension():
+    _with_auth_override()
+    response = client.post(
+        "/api/v1/match-job/file",
+        data={"job_description": "Python dev"},
+        files={"file": ("test.txt", b"hello", "text/plain")},
+    )
+    assert response.status_code == 400
+    assert "Unsupported file type" in response.json()["detail"]
+
+
+def test_match_job_file_no_description():
+    _with_auth_override()
+    response = client.post(
+        "/api/v1/match-job/file",
+        files={"file": ("test.pdf", b"PDF content", "application/pdf")},
+    )
+    assert response.status_code == 422
 
 
 def test_tailor_resume_requires_auth():

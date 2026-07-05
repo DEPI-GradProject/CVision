@@ -21,6 +21,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from auth import auth_backend, current_active_user, fastapi_users
 from config import settings
@@ -51,12 +52,20 @@ def _rate_limit_key(request: Request) -> str:
     return get_remote_address(request)
 
 
-engine = create_engine(
-    settings.database_url_with_ssl,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    connect_args={"connect_timeout": 10},
-)
+_is_sqlite = settings.database_url_with_ssl.startswith("sqlite")
+if _is_sqlite:
+    engine = create_engine(
+        settings.database_url_with_ssl,
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(
+        settings.database_url_with_ssl,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        connect_args={"connect_timeout": 10},
+    )
 SessionLocal = sessionmaker(bind=engine)
 
 app = FastAPI(
