@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AnimatedPage } from '@/components/AnimatedPage'
 import { ScrollReveal } from '@/components/ScrollReveal'
-import { StatSkeleton, ListItemSkeleton } from '@/components/Skeleton'
 import { cn } from '@/lib/utils'
 import { staggerContainer, staggerItem, staggerList, staggerListItem } from '@/lib/animations'
 import { api, ApiError } from '@/api/client'
@@ -161,10 +160,13 @@ export function DashboardPage() {
           animate="visible"
           className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
-          {loading
+            {loading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <motion.div key={i} variants={staggerItem}>
-                  <StatSkeleton />
+                  <div className="animate-pulse">
+                    <div className="h-8 w-16 bg-white/10 rounded mb-2"></div>
+                    <div className="h-4 w-24 bg-white/5 rounded"></div>
+                  </div>
                 </motion.div>
               ))
             : statDefs.map((stat, i) => (
@@ -248,21 +250,23 @@ export function DashboardPage() {
               <CardDescription>Your recent CV analyses</CardDescription>
             </CardHeader>
             <CardContent>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="relative mb-6"
-              >
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Search by filename..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface-light py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder-text-muted transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </motion.div>
+              {!loading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="relative mb-6"
+                >
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Search by filename..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-surface-light py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder-text-muted transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </motion.div>
+              )}
 
               {loading ? (
                 <div className="space-y-3">
@@ -273,7 +277,7 @@ export function DashboardPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.1 }}
                     >
-                      <ListItemSkeleton />
+                      <div className="h-16 rounded-lg bg-white/5 animate-pulse"></div>
                     </motion.div>
                   ))}
                 </div>
