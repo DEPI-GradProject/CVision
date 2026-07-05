@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart3,
+  Briefcase,
   Clock,
   FileText,
   Search,
@@ -10,6 +11,7 @@ import {
   TrendingUp,
   LineChart,
   Loader2,
+  X,
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip as ChartTooltip, Filler } from 'chart.js'
@@ -72,6 +74,7 @@ export function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showJobs, setShowJobs] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -172,7 +175,10 @@ export function DashboardPage() {
             : statDefs.map((stat, i) => (
                 <motion.div key={stat.label} variants={staggerItem}>
                   <ScrollReveal delay={i * 100}>
-                    <Card>
+                    <Card
+                      className={cn(stat.label === 'Jobs Matched' && 'cursor-pointer transition hover:border-amber-400/50')}
+                      onClick={stat.label === 'Jobs Matched' ? () => setShowJobs(true) : undefined}
+                    >
                       <CardContent className="flex items-center gap-4 p-6">
                         <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl', stat.color)}>
                           <stat.icon className="h-6 w-6" />
@@ -367,6 +373,69 @@ export function DashboardPage() {
           </Card>
         </ScrollReveal>
       </div>
+
+      <AnimatePresence>
+        {showJobs && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 px-4 pt-10 pb-10"
+            onClick={() => setShowJobs(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-5 w-5 text-amber-400" />
+                    <CardTitle className="text-lg">Job Matches Breakdown</CardTitle>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setShowJobs(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="max-h-[60vh] overflow-y-auto space-y-2">
+                  {history
+                    .filter((h) => (h.job_matches ?? 0) > 0)
+                    .map((h) => (
+                      <div
+                        key={h.id}
+                        className="flex items-center gap-4 rounded-lg border border-border bg-surface-light/50 p-4"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
+                          <Briefcase className="h-5 w-5 text-amber-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{h.filename}</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {h.skills_extracted.slice(0, 4).map((s) => (
+                              <Badge key={s} variant="outline" className="px-1.5 py-0 text-[10px]">
+                                {s}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-lg font-bold text-amber-400">{h.job_matches}</span>
+                          <span className="text-[10px] text-text-muted">matches</span>
+                        </div>
+                      </div>
+                    ))}
+                  {history.filter((h) => (h.job_matches ?? 0) > 0).length === 0 && (
+                    <p className="py-8 text-center text-sm text-text-muted">No job matches yet</p>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AnimatedPage>
   )
 }
