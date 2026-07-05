@@ -64,6 +64,23 @@ export interface JobMatchResult {
   missing_skills: string[]
   improvement_tips: string[]
   keyword_coverage: number
+  cv_text?: string
+}
+
+export interface TailorResumeResult {
+  tailored_resume: string
+}
+
+export interface StandOutResult {
+  unique_selling_points: string[]
+  suggested_certifications: string[]
+  project_ideas: string[]
+  skill_enhancements: string[]
+  overall_strategy: string
+}
+
+export interface CoverLetterResult {
+  cover_letter: string
 }
 
 export interface RewriteSuggestion {

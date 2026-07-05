@@ -199,6 +199,7 @@ export const api = {
       missing_skills: string[]
       improvement_tips: string[]
       keyword_coverage: number
+      cv_text: string
     }>(res)
   },
 
@@ -217,7 +218,41 @@ export const api = {
       missing_skills: string[]
       improvement_tips: string[]
       keyword_coverage: number
+      cv_text: string
     }>(res)
+  },
+
+  tailorResume: async (jobDescription: string, cvText: string) => {
+    const res = await fetch(`${API_BASE}/tailor-resume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ job_description: jobDescription, cv_text: cvText }),
+    })
+    return handleResponse<{ tailored_resume: string }>(res)
+  },
+
+  standOut: async (jobDescription: string, cvText: string) => {
+    const res = await fetch(`${API_BASE}/stand-out`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ job_description: jobDescription, cv_text: cvText }),
+    })
+    return handleResponse<{
+      unique_selling_points: string[]
+      suggested_certifications: string[]
+      project_ideas: string[]
+      skill_enhancements: string[]
+      overall_strategy: string
+    }>(res)
+  },
+
+  coverLetter: async (jobDescription: string, cvText: string) => {
+    const res = await fetch(`${API_BASE}/cover-letter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ job_description: jobDescription, cv_text: cvText }),
+    })
+    return handleResponse<{ cover_letter: string }>(res)
   },
 
   getRewriteSuggestions: async (file: File) => {

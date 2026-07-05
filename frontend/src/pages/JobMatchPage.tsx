@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Briefcase, RefreshCw, AlertCircle, CheckCircle2, XCircle, Lightbulb, Loader2, FileText, Search, BarChart3, ChevronDown, ChevronUp, FileEdit, Sparkles, PenLine } from 'lucide-react'
+import { Briefcase, RefreshCw, AlertCircle, CheckCircle2, XCircle, Lightbulb, Loader2, FileText, Search, BarChart3, ChevronDown, FileEdit, Sparkles, PenLine, X, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -9,13 +9,19 @@ import { AnimatedPage } from '@/components/AnimatedPage'
 import { cn } from '@/lib/utils'
 import { staggerContainer, staggerItem } from '@/lib/animations'
 import { api } from '@/api/client'
-import type { JobMatchResult } from '@/types'
+import type { CoverLetterResult, JobMatchResult, StandOutResult, TailorResumeResult } from '@/types'
 
 const loadingSteps = [
   { icon: FileText, label: 'Parsing CV...' },
   { icon: Search, label: 'Analyzing job...' },
   { icon: BarChart3, label: 'Calculating match...' },
 ]
+
+const featureLabels: Record<string, { title: string; icon: typeof FileEdit }> = {
+  tailor: { title: 'Tailored Resume', icon: PenLine },
+  standout: { title: 'Ways to Stand Out', icon: Sparkles },
+  cover: { title: 'Cover Letter', icon: FileEdit },
+}
 
 export function JobMatchPage() {
   const [cvFile, setCvFile] = useState<File | null>(null)
@@ -25,6 +31,12 @@ export function JobMatchPage() {
   const [loading, setLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
+
+  const [activeFeature, setActiveFeature] = useState<string | null>(null)
+  const [featureLoading, setFeatureLoading] = useState(false)
+  const [featureResult, setFeatureResult] = useState<TailorResumeResult | StandOutResult | CoverLetterResult | null>(null)
+  const [featureError, setFeatureError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -64,6 +76,153 @@ export function JobMatchPage() {
     setCvText('')
     setJobDescription('')
     setCvFile(null)
+  }
+
+  const handleFeature = async (feature: string) => {
+    const text = result?.cv_text || ''
+    if (!text || !jobDescription.trim()) return
+    setActiveFeature(feature)
+    setFeatureLoading(true)
+    setFeatureError(null)
+    setFeatureResult(null)
+    setCopied(false)
+    try {
+      let res
+      if (feature === 'tailor') {
+        res = await api.tailorResume(jobDescription, text)
+      } else if (feature === 'standout') {
+        res = await api.standOut(jobDescription, text)
+      } else {
+        res = await api.coverLetter(jobDescription, text)
+      }
+      setFeatureResult(res)
+    } catch (err: any) {
+      setFeatureError(err.message || 'Something went wrong')
+    } finally {
+      setFeatureLoading(false)
+    }
+  }
+
+  const handleCopy = async () => {
+    const text = featureResult
+      ? 'tailored_resume' in featureResult
+        ? featureResult.tailored_resume
+        : 'cover_letter' in featureResult
+          ? featureResult.cover_letter
+          : JSON.stringify(featureResult, null, 2)
+      : ''
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
+  }
+
+  const closeModal = () => {
+    setActiveFeature(null)
+    setFeatureResult(null)
+    setFeatureError(null)
+    setFeatureLoading(false)
+  }
+
+  const renderFeatureContent = () => {
+    if (featureLoading) {
+      return (
+        <div className="flex flex-col items-center gap-3 py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-text-muted">Generating...</p>
+        </div>
+      )
+    }
+    if (featureError) {
+      return (
+        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-error">
+          <AlertCircle className="h-4 w-4" /> {featureError}
+        </div>
+      )
+    }
+    if (!featureResult) return null
+
+    if ('tailored_resume' in featureResult) {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border bg-surface-light p-4">
+            <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans text-text-primary">
+              {featureResult.tailored_resume}
+            </pre>
+          </div>
+        </div>
+      )
+    }
+
+    if ('cover_letter' in featureResult) {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border bg-surface-light p-4">
+            <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans text-text-primary">
+              {featureResult.cover_letter}
+            </pre>
+          </div>
+        </div>
+      )
+    }
+
+    if ('unique_selling_points' in featureResult) {
+      return (
+        <div className="space-y-5">
+          <div>
+            <h4 className="text-sm font-semibold mb-2 text-primary">Unique Selling Points</h4>
+            <ul className="space-y-1.5">
+              {featureResult.unique_selling_points.map((p, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-text-secondary">
+                  <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-400" />
+                  <span>{p}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {featureResult.suggested_certifications.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-2 text-primary">Suggested Certifications</h4>
+              <div className="flex flex-wrap gap-2">
+                {featureResult.suggested_certifications.map((c, i) => (
+                  <Badge key={i} variant="default">{c}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {featureResult.project_ideas.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-2 text-primary">Project Ideas</h4>
+              <ul className="space-y-1.5">
+                {featureResult.project_ideas.map((p, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-text-secondary">
+                    <Lightbulb className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                    <span>{p}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {featureResult.skill_enhancements.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-2 text-primary">Skill Enhancements</h4>
+              <div className="flex flex-wrap gap-2">
+                {featureResult.skill_enhancements.map((s, i) => (
+                  <Badge key={i} variant="outline">{s}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="rounded-lg bg-primary/5 p-4">
+            <h4 className="text-sm font-semibold mb-1 text-primary">Strategy</h4>
+            <p className="text-sm text-text-secondary">{featureResult.overall_strategy}</p>
+          </div>
+        </div>
+      )
+    }
+
+    return null
   }
 
   return (
@@ -250,19 +409,25 @@ export function JobMatchPage() {
                       <ChevronDown className="h-4 w-4" /> Show match details
                     </button>
                     <button
-                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors"
+                      onClick={() => handleFeature('tailor')}
+                      disabled={featureLoading && activeFeature === 'tailor'}
+                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors disabled:opacity-50"
                     >
                       <PenLine className="h-4 w-4" /> Tailor my resume
                     </button>
                   </div>
                   <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
                     <button
-                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors"
+                      onClick={() => handleFeature('standout')}
+                      disabled={featureLoading && activeFeature === 'standout'}
+                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors disabled:opacity-50"
                     >
                       <Sparkles className="h-4 w-4" /> Help me stand out
                     </button>
                     <button
-                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors"
+                      onClick={() => handleFeature('cover')}
+                      disabled={featureLoading && activeFeature === 'cover'}
+                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors disabled:opacity-50"
                     >
                       <FileEdit className="h-4 w-4" /> Create cover letter
                     </button>
@@ -373,6 +538,53 @@ export function JobMatchPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Feature Result Modal */}
+      <AnimatePresence>
+        {activeFeature && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 px-4 pt-10 pb-10"
+            onClick={closeModal}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const Icon = featureLabels[activeFeature]?.icon || FileEdit
+                      return <Icon className="h-5 w-5 text-primary" />
+                    })()}
+                    <CardTitle className="text-lg">{featureLabels[activeFeature]?.title || 'Feature'}</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {featureResult && !featureLoading && (
+                      <Button variant="ghost" size="sm" onClick={handleCopy} className="gap-1.5">
+                        {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                        <span className="text-xs">{copied ? 'Copied' : 'Copy'}</span>
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={closeModal}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="max-h-[60vh] overflow-y-auto">
+                  {renderFeatureContent()}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AnimatedPage>
   )
 }

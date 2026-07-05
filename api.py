@@ -26,7 +26,18 @@ from auth import auth_backend, current_active_user, fastapi_users
 from config import settings
 from graph.workflow import graph
 from models.db_models import AnalysisHistory, User
-from models.schemas import AgentState, JobMatchRequest, JobMatchResult, MarketSkill, RewriteResult, RewriteSuggestion
+from models.schemas import (
+    AgentState,
+    CoverLetterRequest,
+    CoverLetterResult,
+    JobMatchRequest,
+    JobMatchResult,
+    MarketSkill,
+    RewriteResult,
+    RewriteSuggestion,
+    StandOutSuggestion,
+    TailorResumeResult,
+)
 from utils.file_handler import extract_text_from_docx, extract_text_from_pdf
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -317,7 +328,7 @@ def match_job(request: Request, body: JobMatchRequest, user: User = Depends(curr
             data.get("matched_skills", []),
             1,
         )
-        return JobMatchResult(**data)
+        return JobMatchResult(**data, cv_text=body.cv_text)
     except Exception as e:
         logger.error("Match job error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to match job: " + str(e))
@@ -372,12 +383,173 @@ def match_job_file(
             data.get("matched_skills", []),
             1,
         )
-        return JobMatchResult(**data)
+        return JobMatchResult(**data, cv_text=cv_text)
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Match job file error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to match job: " + str(e))
+
+
+_tailor_llm = None
+
+
+def _get_tailor_llm():
+    global _tailor_llm
+    if _tailor_llm is None:
+        _tailor_llm = ChatGroq(model=settings.groq_model_fast, temperature=0.2)
+    return _tailor_llm
+
+
+_tailor_prompt = PromptTemplate.from_template("""
+You are an expert CV writer. Rewrite this CV to be highly tailored for the target job.
+
+CV TEXT:
+{cv_text}
+
+TARGET JOB DESCRIPTION:
+{job_description}
+
+Rewrite the entire CV to:
+- Use keywords from the job description naturally
+- Highlight relevant experience first
+- Match the tone and language of the job description
+- Be ATS-friendly with proper section headers
+- Remove or minimise irrelevant experience
+
+IMPORTANT: Do NOT invent or fabricate any numbers, percentages, or metrics.
+Only use quantifiable achievements that were already present in the original CV.
+
+Return ONLY the rewritten CV text, no explanations or extra formatting.
+""")
+
+_POST_TAILOR_REQ_SCHEMA = JobMatchRequest
+_POST_TAILOR_RESP_SCHEMA = TailorResumeResult
+
+
+@app.post("/api/v1/tailor-resume")
+@limiter.limit("5/minute")
+def tailor_resume(request: Request, body: JobMatchRequest, user: User = Depends(current_active_user)):
+    try:
+        llm = _get_tailor_llm()
+        chain = _tailor_prompt | llm | StrOutputParser()
+        result = chain.invoke({"cv_text": body.cv_text, "job_description": body.job_description})
+        if not result or not result.strip():
+            raise ValueError("LLM returned empty response")
+        return TailorResumeResult(tailored_resume=result.strip())
+    except Exception as e:
+        logger.error("Tailor resume error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to tailor resume: " + str(e))
+
+
+_standout_llm = None
+
+
+def _get_standout_llm():
+    global _standout_llm
+    if _standout_llm is None:
+        _standout_llm = ChatGroq(model=settings.groq_model_large, temperature=0.3)
+    return _standout_llm
+
+
+_standout_prompt = PromptTemplate.from_template("""
+You are a career coach helping a candidate stand out for a specific job.
+
+CV TEXT:
+{cv_text}
+
+TARGET JOB DESCRIPTION:
+{job_description}
+
+Return ONLY valid JSON (no markdown, no explanation):
+{{
+  "unique_selling_points": ["what makes them unique for this role", "another point"],
+  "suggested_certifications": ["relevant certification to pursue", "another cert"],
+  "project_ideas": ["a portfolio project idea", "another project idea"],
+  "skill_enhancements": ["secondary skill to develop", "another skill"],
+  "overall_strategy": "2-3 sentence strategy to differentiate from other applicants"
+}}
+
+Rules:
+- unique_selling_points: 2-4 specific strengths from the CV that align with the job
+- suggested_certifications: 1-3 realistic certifications (not fabricated)
+- project_ideas: 2-3 specific project ideas that demonstrate relevant skills
+- skill_enhancements: 1-3 adjacent skills worth developing
+- overall_strategy: concise differentiation strategy
+- Do NOT invent numbers or metrics not in the CV
+""")
+
+_POST_STANDOUT_REQ_SCHEMA = JobMatchRequest
+_POST_STANDOUT_RESP_SCHEMA = StandOutSuggestion
+
+
+@app.post("/api/v1/stand-out")
+@limiter.limit("5/minute")
+def stand_out(request: Request, body: JobMatchRequest, user: User = Depends(current_active_user)):
+    try:
+        llm = _get_standout_llm()
+        chain = _standout_prompt | llm | StrOutputParser()
+        result = chain.invoke({"cv_text": body.cv_text, "job_description": body.job_description})
+        if not result or not result.strip():
+            raise ValueError("LLM returned empty response")
+        clean = _extract_json(result)
+        data = json.loads(clean)
+        return StandOutSuggestion(**data)
+    except Exception as e:
+        logger.error("Stand out error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate suggestions: " + str(e))
+
+
+_cover_llm = None
+
+
+def _get_cover_llm():
+    global _cover_llm
+    if _cover_llm is None:
+        _cover_llm = ChatGroq(model=settings.groq_model_large, temperature=0.3)
+    return _cover_llm
+
+
+_cover_prompt = PromptTemplate.from_template("""
+You are an expert cover letter writer. Write a professional, compelling cover letter.
+
+CV TEXT:
+{cv_text}
+
+TARGET JOB DESCRIPTION:
+{job_description}
+
+Write a cover letter that:
+- Is addressed to the hiring manager
+- Opens with a strong hook about the role and company
+- Highlights 2-3 key achievements most relevant to the job
+- Explains why the candidate is a great fit
+- Shows knowledge of the industry/role
+- Ends with a call to action and polite closing
+
+IMPORTANT: Do NOT invent specific numbers, percentages, or metrics not present in the CV.
+Keep it professional, concise, and tailored to the job.
+
+Return ONLY the cover letter text, no explanations.
+""")
+
+_POST_COVER_REQ_SCHEMA = CoverLetterRequest
+_POST_COVER_RESP_SCHEMA = CoverLetterResult
+
+
+@app.post("/api/v1/cover-letter")
+@limiter.limit("5/minute")
+def cover_letter(request: Request, body: CoverLetterRequest, user: User = Depends(current_active_user)):
+    try:
+        llm = _get_cover_llm()
+        chain = _cover_prompt | llm | StrOutputParser()
+        result = chain.invoke({"cv_text": body.cv_text, "job_description": body.job_description})
+        if not result or not result.strip():
+            raise ValueError("LLM returned empty response")
+        return CoverLetterResult(cover_letter=result.strip())
+    except Exception as e:
+        logger.error("Cover letter error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate cover letter: " + str(e))
 
 
 _rewrite_llm = None

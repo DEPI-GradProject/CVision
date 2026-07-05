@@ -81,6 +81,28 @@ class JobMatchResult(BaseModel):
     missing_skills: list[str]
     improvement_tips: list[str]
     keyword_coverage: float = 0.0
+    cv_text: str = ""
+
+
+class TailorResumeResult(BaseModel):
+    tailored_resume: str
+
+
+class StandOutSuggestion(BaseModel):
+    unique_selling_points: list[str]
+    suggested_certifications: list[str]
+    project_ideas: list[str]
+    skill_enhancements: list[str]
+    overall_strategy: str
+
+
+class CoverLetterRequest(BaseModel):
+    job_description: str
+    cv_text: str
+
+
+class CoverLetterResult(BaseModel):
+    cover_letter: str
 
 
 class RewriteSuggestion(BaseModel):
