@@ -51,6 +51,7 @@ class AnalysisHistory(Base):
     ats_score = Column(Integer, nullable=True)
     skills_extracted = Column(Text, nullable=True)
     job_matches = Column(Integer, nullable=True)
+    matched_jobs = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False)
 
     def __repr__(self):

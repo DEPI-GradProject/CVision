@@ -71,6 +71,98 @@ function CountUp({ value, duration = 1000 }: { value: string; duration?: number 
   )
 }
 
+interface PersistedJobItem {
+  job_title: string
+  job_link: string
+  platform: string
+  published_date?: string
+}
+
+function PersistedJobs({ jobs, skills }: { jobs: PersistedJobItem[]; skills: string[] }) {
+  const [page, setPage] = useState(0)
+  const perPage = 10
+  const totalPages = Math.max(1, Math.ceil(jobs.length / perPage))
+  const safePage = Math.min(page, totalPages - 1)
+  const start = safePage * perPage
+  const pageJobs = jobs.slice(start, start + perPage)
+
+  return (
+    <div className="space-y-2">
+      {pageJobs.map((job, i) => (
+        <div
+          key={start + i}
+          className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface-light/30 p-3"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium truncate">{job.job_title}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <Badge variant="default" className="rounded-full text-[10px] px-2 py-0">
+                {job.platform}
+              </Badge>
+              {job.published_date && (
+                <span className="text-[10px] text-text-muted">
+                  {new Date(job.published_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              )}
+            </div>
+          </div>
+          <a
+            href={job.job_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-xs font-medium text-primary hover:underline whitespace-nowrap"
+          >
+            Apply &rarr;
+          </a>
+        </div>
+      ))}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-1">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+            className="px-2.5 py-1 text-[10px] font-medium rounded-lg border border-border transition disabled:opacity-30 hover:border-primary/50"
+          >
+            Previous
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i)}
+              className={cn(
+                'w-7 h-7 text-[10px] font-medium rounded-lg border transition',
+                i === safePage
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border hover:border-primary/50 text-text-muted',
+              )}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={safePage === totalPages - 1}
+            className="px-2.5 py-1 text-[10px] font-medium rounded-lg border border-border transition disabled:opacity-30 hover:border-primary/50"
+          >
+            Next
+          </button>
+        </div>
+      )}
+      {skills.length > 0 && (
+        <a
+          href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(skills.slice(0, 3).join(' '))}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-border/50 py-2 text-xs text-text-muted hover:text-primary hover:border-primary/30 transition-colors"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Search live jobs on LinkedIn
+        </a>
+      )}
+    </div>
+  )
+}
+
 export function DashboardPage() {
   const navigate = useNavigate()
   const [history, setHistory] = useState<AnalysisHistory[]>([])
@@ -473,59 +565,32 @@ export function DashboardPage() {
                               className="overflow-hidden"
                             >
                               <div className="pl-14 pr-4 pt-2 pb-3 space-y-2">
-                                {jobsLoading.has(h.id) ? (
-                                  <div className="flex items-center gap-2 py-4 text-sm text-text-muted">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Loading matching jobs...
-                                  </div>
-                                ) : (jobsCache.get(h.id) ?? []).length === 0 ? (
-                                  <div className="py-4 text-center space-y-2">
-                                    <p className="text-sm text-text-muted">
-                                      {h.job_matches} matches were found during analysis in a larger job database.
-                                      The {h.job_matches} most recent listings don't include matching roles.
-                                    </p>
-                                  </div>
-                                ) : (
-                                  (jobsCache.get(h.id) ?? []).map((job) => (
-                                    <div
-                                      key={job.id}
-                                      className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface-light/30 p-3"
-                                    >
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-sm font-medium truncate">{job.job_title}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                          <Badge variant="default" className="rounded-full text-[10px] px-2 py-0">
-                                            {job.platform}
-                                          </Badge>
-                                          {job.published_date && (
-                                            <span className="text-[10px] text-text-muted">
-                                              {new Date(job.published_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                            </span>
-                                          )}
-                                        </div>
+                                {(() => {
+                                  const persisted = h.matched_jobs
+                                  if (persisted && persisted.length > 0) {
+                                    return <PersistedJobs jobs={persisted} skills={h.skills_extracted} />
+                                  }
+                                  if (jobsLoading.has(h.id)) {
+                                    return (
+                                      <div className="flex items-center gap-2 py-4 text-sm text-text-muted">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Loading matching jobs...
                                       </div>
-                                      <a
-                                        href={job.job_link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="shrink-0 text-xs font-medium text-primary hover:underline whitespace-nowrap"
-                                      >
-                                        Apply &rarr;
-                                      </a>
-                                    </div>
-                                  ))
-                                )}
-                                {h.skills_extracted.length > 0 && (
-                                  <a
-                                    href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(h.skills_extracted.slice(0, 3).join(' '))}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center justify-center gap-1.5 rounded-lg border border-border/50 py-2 text-xs text-text-muted hover:text-primary hover:border-primary/30 transition-colors"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                    Search live jobs on LinkedIn
-                                  </a>
-                                )}
+                                    )
+                                  }
+                                  const cached = jobsCache.get(h.id)
+                                  if (cached && cached.length > 0) {
+                                    return <PersistedJobs jobs={cached.map((j) => ({ job_title: j.job_title, job_link: j.job_link, platform: j.platform, published_date: j.published_date }))} skills={h.skills_extracted} />
+                                  }
+                                  if (cached) {
+                                    return (
+                                      <div className="py-4 text-center space-y-2">
+                                        <p className="text-sm text-text-muted">No matching jobs found in database</p>
+                                      </div>
+                                    )
+                                  }
+                                  return null
+                                })()}
                               </div>
                             </motion.div>
                           )}

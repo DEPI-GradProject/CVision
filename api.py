@@ -99,7 +99,7 @@ class UserUpdate(CreateUpdateDictModel):
     password: str | None = None
 
 
-def _save_analysis(user_id: int, filename: str, ats_score: int | None, skills: list[str], job_matches: int):
+def _save_analysis(user_id: int, filename: str, ats_score: int | None, skills: list[str], job_matches: int, matched_jobs: list[dict] | None = None):
     db = SessionLocal()
     try:
         record = AnalysisHistory(
@@ -108,6 +108,7 @@ def _save_analysis(user_id: int, filename: str, ats_score: int | None, skills: l
             ats_score=ats_score,
             skills_extracted=json.dumps(skills),
             job_matches=job_matches,
+            matched_jobs=json.dumps(matched_jobs, ensure_ascii=False) if matched_jobs else None,
             created_at=datetime.now(UTC),
         )
         db.add(record)
@@ -209,6 +210,7 @@ def get_analysis_history(request: Request, user: User = Depends(current_active_u
                         "ats_score": r.ats_score,
                         "skills_extracted": json.loads(r.skills_extracted) if r.skills_extracted else [],
                         "job_matches": r.job_matches,
+                        "matched_jobs": json.loads(r.matched_jobs) if r.matched_jobs else None,
                         "created_at": r.created_at.isoformat(),
                     }
                 )
@@ -905,7 +907,7 @@ def _run_pipeline(file_path: str, file_name: str, user_id: int | None = None):
         job_matches = len(merged_jobs)
 
         if user_id is not None:
-            _save_analysis(user_id, file_name, ats_score, skills, job_matches)
+            _save_analysis(user_id, file_name, ats_score, skills, job_matches, merged_jobs)
 
         payload = json.dumps(
             {

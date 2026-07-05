@@ -40,6 +40,16 @@ export interface AnalysisHistory {
   ats_score: number | null
   skills_extracted: string[]
   job_matches: number | null
+  matched_jobs?: Array<{
+    job_title: string
+    job_link: string
+    platform: string
+    description?: string
+    faiss_score?: number | null
+    matched_skills?: string[]
+    missing_skills?: string[]
+    reason?: string | null
+  }> | null
   created_at: string
 }
 
