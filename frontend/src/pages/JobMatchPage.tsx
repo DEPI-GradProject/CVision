@@ -175,7 +175,7 @@ export function JobMatchPage() {
             <ul className="space-y-1.5">
               {featureResult.unique_selling_points.map((p, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-text-secondary">
-                  <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-400" />
+                  <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#ff9500]" />
                   <span>{p}</span>
                 </li>
               ))}
@@ -359,14 +359,14 @@ export function JobMatchPage() {
                           strokeDasharray={`${result.match_score * 2.827} 282.7`}
                           className={cn(
                             'transition-all duration-1000',
-                            result.match_score >= 75 ? 'text-success' : result.match_score >= 50 ? 'text-amber-400' : 'text-error',
+                            result.match_score >= 75 ? 'text-success' : result.match_score >= 50 ? 'text-[#ff9500]' : 'text-error',
                           )}
                           strokeLinecap="round"
                         />
                       </svg>
                       <span className={cn(
                         'absolute text-3xl font-bold',
-                        result.match_score >= 75 ? 'text-success' : result.match_score >= 50 ? 'text-amber-400' : 'text-error',
+                        result.match_score >= 75 ? 'text-success' : result.match_score >= 50 ? 'text-[#ff9500]' : 'text-error',
                       )}>
                         {result.match_score}%
                       </span>
@@ -383,7 +383,7 @@ export function JobMatchPage() {
                     result.match_score >= 75
                       ? 'bg-success/5'
                       : result.match_score >= 50
-                        ? 'bg-amber-500/5'
+                        ? 'bg-[#ff9500]/5'
                         : 'bg-error/5',
                   )}>
                     <p className="font-semibold text-sm mb-1">
@@ -455,7 +455,7 @@ export function JobMatchPage() {
                     />
                     <span className={cn(
                       'text-sm font-medium whitespace-nowrap',
-                      result.keyword_coverage >= 0.7 ? 'text-success' : result.keyword_coverage >= 0.4 ? 'text-amber-400' : 'text-error',
+                      result.keyword_coverage >= 0.7 ? 'text-success' : result.keyword_coverage >= 0.4 ? 'text-[#ff9500]' : 'text-error',
                     )}>
                       {Math.round(result.keyword_coverage * 100)}%
                     </span>

@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart3,
   Briefcase,
   Clock,
+  ExternalLink,
   FileText,
   Search,
   Sparkles,
@@ -12,6 +13,8 @@ import {
   LineChart,
   Loader2,
   X,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip as ChartTooltip, Filler } from 'chart.js'
@@ -25,7 +28,7 @@ import { ScrollReveal } from '@/components/ScrollReveal'
 import { cn } from '@/lib/utils'
 import { staggerContainer, staggerItem, staggerList, staggerListItem } from '@/lib/animations'
 import { api, ApiError } from '@/api/client'
-import type { AnalysisHistory, DashboardStats } from '@/types'
+import type { AnalysisHistory, DashboardStats, RawJob } from '@/types'
 
 function CountUp({ value, duration = 1000 }: { value: string; duration?: number }) {
   const num = parseInt(value)
@@ -75,6 +78,9 @@ export function DashboardPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [showJobs, setShowJobs] = useState(false)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [jobsCache, setJobsCache] = useState<Map<number, RawJob[]>>(new Map())
+  const [jobsLoading, setJobsLoading] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -112,12 +118,39 @@ export function DashboardPage() {
 
   const statDefs = stats
     ? [
-        { label: 'CVs Analyzed', value: String(stats.total_analyses), icon: FileText, color: 'text-primary bg-primary-muted' },
-        { label: 'Average Score', value: String(stats.average_score), icon: BarChart3, color: 'text-emerald-400 bg-emerald-500/10' },
-        { label: 'Jobs Matched', value: String(stats.total_job_matches), icon: TrendingUp, color: 'text-amber-400 bg-amber-500/10' },
-        { label: 'Last Analysis', value: stats.last_analysis, icon: Clock, color: 'text-purple-400 bg-purple-500/10' },
+        { label: 'CVs Analyzed', value: String(stats.total_analyses), icon: FileText, color: 'text-[#007aff] bg-[#007aff]/10' },
+        { label: 'Average Score', value: String(stats.average_score), icon: BarChart3, color: 'text-[#34c759] bg-[#34c759]/10' },
+        { label: 'Jobs Matched', value: String(stats.total_job_matches), icon: TrendingUp, color: 'text-[#ff9500] bg-[#ff9500]/10' },
+        { label: 'Last Analysis', value: stats.last_analysis, icon: Clock, color: 'text-[#af52de] bg-[#af52de]/10' },
       ]
     : []
+
+  const handleRowClick = async (h: AnalysisHistory) => {
+    if (expandedId === h.id) {
+      setExpandedId(null)
+      return
+    }
+    setExpandedId(h.id)
+    if (jobsCache.has(h.id)) return
+    setJobsLoading((prev) => new Set(prev).add(h.id))
+    try {
+      const res = await api.getLatestJobs(50)
+      const skillsLower = h.skills_extracted.map((s) => s.toLowerCase())
+      const matched = res.data.filter((job) => {
+        const searchText = `${job.job_title} ${job.description ?? ''}`.toLowerCase()
+        return skillsLower.some((s) => searchText.includes(s))
+      })
+      setJobsCache((prev) => new Map(prev).set(h.id, matched))
+    } catch {
+      setJobsCache((prev) => new Map(prev).set(h.id, []))
+    } finally {
+      setJobsLoading((prev) => {
+        const next = new Set(prev)
+        next.delete(h.id)
+        return next
+      })
+    }
+  }
 
   return (
     <AnimatedPage>
@@ -176,7 +209,7 @@ export function DashboardPage() {
                 <motion.div key={stat.label} variants={staggerItem}>
                   <ScrollReveal delay={i * 100}>
                     <Card
-                      className={cn(stat.label === 'Jobs Matched' && 'cursor-pointer transition hover:border-amber-400/50')}
+                      className={cn(stat.label === 'Jobs Matched' && 'cursor-pointer transition hover:border-[#ff9500]/50')}
                       onClick={stat.label === 'Jobs Matched' ? () => setShowJobs(true) : undefined}
                     >
                       <CardContent className="flex items-center gap-4 p-6">
@@ -214,12 +247,12 @@ export function DashboardPage() {
                       datasets: [{
                         label: 'ATS Score',
                         data: [...history].reverse().map((h) => h.ats_score ?? 0),
-                        borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderColor: '#007aff',
+                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
                         fill: true,
                         tension: 0.4,
                         pointRadius: 4,
-                        pointBackgroundColor: '#6366f1',
+                        pointBackgroundColor: '#007aff',
                       }],
                     }}
                     options={{
@@ -381,7 +414,7 @@ export function DashboardPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 px-4 pt-10 pb-10"
-            onClick={() => setShowJobs(false)}
+            onClick={() => { setShowJobs(false); setExpandedId(null) }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -393,10 +426,10 @@ export function DashboardPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <Briefcase className="h-5 w-5 text-amber-400" />
+                    <Briefcase className="h-5 w-5 text-[#ff9500]" />
                     <CardTitle className="text-lg">Job Matches Breakdown</CardTitle>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setShowJobs(false)}>
+                  <Button variant="ghost" size="sm" onClick={() => { setShowJobs(false); setExpandedId(null) }}>
                     <X className="h-4 w-4" />
                   </Button>
                 </CardHeader>
@@ -404,27 +437,107 @@ export function DashboardPage() {
                   {history
                     .filter((h) => (h.job_matches ?? 0) > 0)
                     .map((h) => (
-                      <div
-                        key={h.id}
-                        className="flex items-center gap-4 rounded-lg border border-border bg-surface-light/50 p-4"
-                      >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                          <Briefcase className="h-5 w-5 text-amber-400" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{h.filename}</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {h.skills_extracted.slice(0, 4).map((s) => (
-                              <Badge key={s} variant="outline" className="px-1.5 py-0 text-[10px]">
-                                {s}
-                              </Badge>
-                            ))}
+                      <div key={h.id}>
+                        <button
+                          onClick={() => handleRowClick(h)}
+                          className="w-full flex items-center gap-4 rounded-lg border border-border bg-surface-light/50 p-4 text-left transition hover:border-primary/30 hover:bg-surface-light"
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#ff9500]/10 shrink-0">
+                            <Briefcase className="h-5 w-5 text-[#ff9500]" />
                           </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="text-lg font-bold text-amber-400">{h.job_matches}</span>
-                          <span className="text-[10px] text-text-muted">matches</span>
-                        </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{h.filename}</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {h.skills_extracted.slice(0, 4).map((s) => (
+                                <Badge key={s} variant="outline" className="px-1.5 py-0 text-[10px]">
+                                  {s}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end shrink-0">
+                            <span className="text-lg font-bold text-[#ff9500]">{h.job_matches}</span>
+                            <span className="text-[10px] text-text-muted">matches</span>
+                          </div>
+                          <div className="shrink-0 text-text-muted">
+                            {expandedId === h.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </div>
+                        </button>
+                        <AnimatePresence>
+                          {expandedId === h.id && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                              className="overflow-hidden"
+                            >
+                              <div className="pl-14 pr-4 pt-2 pb-3 space-y-2">
+                                {jobsLoading.has(h.id) ? (
+                                  <div className="flex items-center gap-2 py-4 text-sm text-text-muted">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Loading matching jobs...
+                                  </div>
+                                ) : (jobsCache.get(h.id) ?? []).length === 0 ? (
+                                  <div className="py-4 text-center">
+                                    <p className="text-sm text-text-muted">No matching jobs found in database</p>
+                                    {h.skills_extracted.length > 0 && (
+                                      <a
+                                        href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(h.skills_extracted.slice(0, 3).join(' '))}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                                      >
+                                        <ExternalLink className="h-3 w-3" />
+                                        Search live jobs on LinkedIn
+                                      </a>
+                                    )}
+                                  </div>
+                                ) : (
+                                  (jobsCache.get(h.id) ?? []).map((job) => (
+                                    <div
+                                      key={job.id}
+                                      className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface-light/30 p-3"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium truncate">{job.job_title}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                          <Badge variant="default" className="rounded-full text-[10px] px-2 py-0">
+                                            {job.platform}
+                                          </Badge>
+                                          {job.published_date && (
+                                            <span className="text-[10px] text-text-muted">
+                                              {new Date(job.published_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <a
+                                        href={job.job_link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="shrink-0 text-xs font-medium text-primary hover:underline whitespace-nowrap"
+                                      >
+                                        Apply &rarr;
+                                      </a>
+                                    </div>
+                                  ))
+                                )}
+                                {!jobsLoading.has(h.id) && h.skills_extracted.length > 0 && (
+                                  <a
+                                    href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(h.skills_extracted.slice(0, 3).join(' '))}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center gap-1.5 rounded-lg border border-border/50 py-2 text-xs text-text-muted hover:text-primary hover:border-primary/30 transition-colors"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                    Search live jobs on LinkedIn
+                                  </a>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     ))}
                   {history.filter((h) => (h.job_matches ?? 0) > 0).length === 0 && (

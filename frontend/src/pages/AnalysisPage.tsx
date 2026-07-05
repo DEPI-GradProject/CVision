@@ -18,7 +18,6 @@ import {
   Target,
   TrendingUp,
   XCircle,
-  Circle,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
@@ -89,7 +88,7 @@ function StepIndicator({ steps, currentStep }: { steps: string[]; currentStep: s
               className={cn(
                 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl text-xs font-medium transition-all',
                 isComplete
-                  ? 'bg-emerald-500/15 text-emerald-400'
+                  ? 'bg-[#34c759]/15 text-[#34c759]'
                   : isActive
                     ? 'bg-primary/15 text-primary ring-1 ring-primary/30'
                     : 'bg-surface-light text-text-muted',
@@ -111,7 +110,7 @@ function StepIndicator({ steps, currentStep }: { steps: string[]; currentStep: s
               className={cn(
                 'text-sm transition-colors',
                 isComplete
-                  ? 'text-emerald-400'
+                  ? 'text-[#34c759]'
                   : isActive
                     ? 'text-text-primary font-medium'
                     : 'text-text-muted',
@@ -259,7 +258,7 @@ function SkillsGap({ skills }: { skills: string[] }) {
 
   useEffect(() => {
     api.getMarketDemand()
-      .then((res) => setMarketSkills(res.data.filter((s) => s.demand_level === 'high')))
+      .then((res) => setMarketSkills((res.data as MarketSkill[]).filter((s) => s.demand_level === 'high')))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -272,7 +271,7 @@ function SkillsGap({ skills }: { skills: string[] }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-amber-400" />
+          <TrendingUp className="h-5 w-5 text-[#ff9500]" />
           Skills Gap Analysis
         </CardTitle>
         <CardDescription>High-demand skills missing from your CV</CardDescription>
@@ -348,7 +347,7 @@ function RewriteSuggestions({ file }: { file: File }) {
           className="flex w-full items-center justify-between"
         >
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-400" /> CV Rewrite Suggestions
+            <Sparkles className="h-5 w-5 text-[#ff9500]" /> CV Rewrite Suggestions
           </CardTitle>
           {expanded ? <ChevronDown className="h-5 w-5 text-text-muted" /> : <ChevronRight className="h-5 w-5 text-text-muted" />}
         </button>

@@ -95,6 +95,15 @@ export interface RewriteResult {
   quick_wins: string[]
 }
 
+export interface RawJob {
+  id: number
+  platform: string
+  job_title: string
+  job_link: string
+  description?: string
+  published_date?: string
+}
+
 export interface MarketSkill {
   skill: string
   job_count: number

@@ -7,14 +7,11 @@ import {
   Sparkles,
   Upload,
   Users,
-  CheckCircle,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CardContent } from '@/components/ui/card'
-import { ScrollReveal } from '@/components/ScrollReveal'
 import { AnimatedPage } from '@/components/AnimatedPage'
 import { cn } from '@/lib/utils'
 
@@ -23,25 +20,25 @@ const features = [
     icon: FileSearch,
     title: 'Smart Parsing',
     description: 'AI extracts skills, experience, and education from any CV format with precision.',
-    color: 'from-violet-500 to-purple-500',
+    color: 'from-[#007aff] to-[#5856d6]',
   },
   {
     icon: BarChart3,
     title: 'ATS Scoring',
     description: 'Get a detailed compatibility score and know exactly where you stand.',
-    color: 'from-emerald-500 to-teal-500',
+    color: 'from-[#34c759] to-[#30d158]',
   },
   {
     icon: Brain,
     title: 'Job Matching',
     description: 'Find the best-fitting roles from thousands of live listings.',
-    color: 'from-amber-500 to-orange-500',
+    color: 'from-[#ff9500] to-[#ff9f0a]',
   },
   {
     icon: Users,
     title: 'Market Insights',
     description: 'Understand demand for your skills and identify growth opportunities.',
-    color: 'from-sky-500 to-blue-500',
+    color: 'from-[#007aff] to-[#0a84ff]',
   },
 ]
 
@@ -91,7 +88,7 @@ export function HomePage() {
             <h1 className="text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl/none leading-[1.05]">
               Transform Your CV
               <br />
-              <span className="bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#007aff] via-[#0a84ff] to-[#5856d6] bg-clip-text text-transparent">
                 Career Opportunities
               </span>
             </h1>
@@ -196,7 +193,7 @@ export function HomePage() {
                   </div>
                 )}
                 <div className="flex flex-col items-center text-center">
-                  <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-500 shadow-xl shadow-violet-500/20">
+                  <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#007aff] to-[#005bbf] shadow-xl shadow-[#007aff]/20">
                     <motion.div
                       whileHover={{ scale: 1.08, rotate: -5 }}
                       transition={{ type: 'spring', stiffness: 300 }}

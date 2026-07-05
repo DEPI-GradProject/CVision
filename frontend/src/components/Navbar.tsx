@@ -41,7 +41,7 @@ export function Navbar() {
         <Link to="/" className="group flex items-center gap-2.5">
           <motion.div
             whileHover={{ rotate: -10, scale: 1.05 }}
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-500 shadow-md"
+            className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#007aff] to-[#005bbf] shadow-md"
           >
             <Sparkles className="h-3.5 w-3.5 text-white" />
           </motion.div>

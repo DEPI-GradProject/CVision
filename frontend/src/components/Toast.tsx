@@ -28,7 +28,7 @@ const icons = {
 }
 
 const colors = {
-  success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+  success: 'border-[#34c759]/30 bg-[#34c759]/10 text-[#34c759]',
   error: 'border-red-500/30 bg-red-500/10 text-red-400',
   info: 'border-primary/30 bg-primary-muted text-primary',
 }

@@ -114,7 +114,7 @@ export function UploadPage() {
                     dragActive
                       ? 'border-primary bg-primary-muted'
                       : file
-                        ? 'border-success bg-emerald-500/5'
+                        ? 'border-success bg-[#34c759]/5'
                         : 'border-border hover:border-primary/50 hover:bg-surface-light',
                   )}
                 >
@@ -136,7 +136,7 @@ export function UploadPage() {
                         className="text-center"
                       >
                         <motion.div
-                          className="mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10"
+                          className="mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#34c759]/10"
                           animate={{ rotate: [0, 0, 0, 0, 0] }}
                         >
                           <CheckCircle2 className="h-8 w-8 text-success" />
