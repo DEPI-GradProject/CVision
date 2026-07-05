@@ -1,3 +1,4 @@
+import asyncio
 import os
 from unittest.mock import Mock
 
@@ -13,8 +14,30 @@ from fastapi.testclient import TestClient
 
 from api import app
 from auth import current_active_user
+from auth.database import get_async_engine
+from models.db_models import Base as DBBase
 
 client = TestClient(app)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _create_tables():
+    """Create all tables on the in-memory SQLite before tests."""
+
+    async def _init():
+        engine = get_async_engine()
+        async with engine.begin() as conn:
+            await conn.run_sync(DBBase.metadata.create_all)
+
+    asyncio.run(_init())
+    yield
+
+    async def _drop():
+        engine = get_async_engine()
+        async with engine.begin() as conn:
+            await conn.run_sync(DBBase.metadata.drop_all)
+
+    asyncio.run(_drop())
 
 
 @pytest.fixture(autouse=True)
@@ -143,3 +166,124 @@ def test_health_endpoint_rate_limited():
         client.get("/api/v1/health")
     response = client.get("/api/v1/health")
     assert response.status_code == 429
+
+
+# --- Auth integration tests ---
+
+
+def test_auth_register_success():
+    email = "newuser@test.com"
+    password = "Str0ng!Pass"
+    response = client.post("/auth/register", json={"email": email, "password": password})
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == email
+    assert data["is_active"] is True
+
+
+def test_auth_register_duplicate():
+    response = client.post("/auth/register", json={"email": "newuser@test.com", "password": "Str0ng!Pass"})
+    assert response.status_code == 400
+
+
+def test_auth_login_success():
+    response = client.post("/auth/login", data={"username": "newuser@test.com", "password": "Str0ng!Pass"})
+    assert response.status_code == 200
+    token = response.json()
+    assert "access_token" in token
+    assert token["token_type"] == "bearer"
+
+
+def test_auth_login_wrong_password():
+    response = client.post("/auth/login", data={"username": "newuser@test.com", "password": "wrongpass"})
+    assert response.status_code == 400
+
+
+def test_auth_me_authenticated():
+    res = client.post("/auth/login", data={"username": "newuser@test.com", "password": "Str0ng!Pass"})
+    token = res.json()["access_token"]
+    response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == "newuser@test.com"
+
+
+# --- Protected endpoint auth checks ---
+
+
+def test_history_requires_auth():
+    response = client.get("/api/v1/history")
+    assert response.status_code == 401
+
+
+def test_stats_requires_auth():
+    response = client.get("/api/v1/stats")
+    assert response.status_code == 401
+
+
+def test_match_job_requires_auth():
+    response = client.post("/api/v1/match-job", json={})
+    assert response.status_code == 401
+
+
+def test_match_job_file_requires_auth():
+    response = client.post("/api/v1/match-job/file")
+    assert response.status_code == 401
+
+
+def test_tailor_resume_requires_auth():
+    response = client.post("/api/v1/tailor-resume", json={})
+    assert response.status_code == 401
+
+
+def test_stand_out_requires_auth():
+    response = client.post("/api/v1/stand-out", json={})
+    assert response.status_code == 401
+
+
+def test_cover_letter_requires_auth():
+    response = client.post("/api/v1/cover-letter", json={})
+    assert response.status_code == 401
+
+
+def test_rewrite_suggestions_requires_auth():
+    response = client.post("/api/v1/rewrite-suggestions", json={})
+    assert response.status_code == 401
+
+
+def test_skills_market_demand_requires_auth():
+    response = client.get("/api/v1/skills/market-demand")
+    assert response.status_code == 401
+
+
+# --- Protected endpoint validation tests (with auth override) ---
+
+
+def test_match_job_validation_error():
+    _with_auth_override()
+    response = client.post("/api/v1/match-job", json={})
+    assert response.status_code == 422
+
+
+def test_tailor_resume_validation_error():
+    _with_auth_override()
+    response = client.post("/api/v1/tailor-resume", json={})
+    assert response.status_code == 422
+
+
+def test_stand_out_validation_error():
+    _with_auth_override()
+    response = client.post("/api/v1/stand-out", json={})
+    assert response.status_code == 422
+
+
+def test_cover_letter_validation_error():
+    _with_auth_override()
+    response = client.post("/api/v1/cover-letter", json={})
+    assert response.status_code == 422
+
+
+def test_rewrite_suggestions_validation_error():
+    _with_auth_override()
+    response = client.post("/api/v1/rewrite-suggestions", json={})
+    assert response.status_code == 422
