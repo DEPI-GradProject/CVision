@@ -224,6 +224,8 @@ def get_analysis_stats(request: Request, user: User = Depends(current_active_use
             last = max((r.created_at for r in records), default=None)
 
             if last:
+                if last.tzinfo is None:
+                    last = last.replace(tzinfo=UTC)
                 delta = datetime.now(UTC) - last
                 if delta.days > 0:
                     last_str = f"{delta.days}d ago"

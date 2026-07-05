@@ -77,16 +77,24 @@ export function DashboardPage() {
     let cancelled = false
     async function load() {
       try {
-        const [histRes, statsRes] = await Promise.all([api.getHistory(50), api.getStats()])
+        const histRes = await api.getHistory(50)
         if (cancelled) return
         setHistory(histRes.data)
-        setStats(statsRes.data)
       } catch (err) {
         if (cancelled) return
         if (err instanceof ApiError && err.status === 401) {
           navigate('/login')
           return
         }
+      }
+      try {
+        if (cancelled) return
+        const statsRes = await api.getStats()
+        if (cancelled) return
+        setStats(statsRes.data)
+      } catch {
+        if (cancelled) return
+        setStats({ total_analyses: 0, average_score: 0, total_job_matches: 0, last_analysis: 'N/A' })
       } finally {
         if (!cancelled) setLoading(false)
       }
