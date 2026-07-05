@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Briefcase, RefreshCw, AlertCircle, CheckCircle2, XCircle, Lightbulb, Loader2, FileText, Search, BarChart3 } from 'lucide-react'
+import { Briefcase, RefreshCw, AlertCircle, CheckCircle2, XCircle, Lightbulb, Loader2, FileText, Search, BarChart3, ChevronDown, ChevronUp, FileEdit, Sparkles, PenLine } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -189,35 +189,93 @@ export function JobMatchPage() {
               exit={{ opacity: 0, y: -20 }}
               className="mx-auto mt-12 max-w-3xl space-y-6"
             >
-              <Card>
-                <CardContent className="p-8">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="relative flex h-28 w-28 items-center justify-center">
-                      <svg className="h-28 w-28 -rotate-90" viewBox="0 0 100 100">
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex flex-col items-center gap-3 p-8 pb-6">
+                    <div className="relative flex h-24 w-24 items-center justify-center">
+                      <svg className="h-24 w-24 -rotate-90" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-border" />
                         <circle
                           cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8"
                           strokeDasharray={`${result.match_score * 2.827} 282.7`}
                           className={cn(
                             'transition-all duration-1000',
-                            result.match_score >= 80 ? 'text-success' : result.match_score >= 50 ? 'text-amber-400' : 'text-error',
+                            result.match_score >= 75 ? 'text-success' : result.match_score >= 50 ? 'text-amber-400' : 'text-error',
                           )}
                           strokeLinecap="round"
                         />
                       </svg>
                       <span className={cn(
                         'absolute text-3xl font-bold',
-                        result.match_score >= 80 ? 'text-success' : result.match_score >= 50 ? 'text-amber-400' : 'text-error',
+                        result.match_score >= 75 ? 'text-success' : result.match_score >= 50 ? 'text-amber-400' : 'text-error',
                       )}>
                         {result.match_score}%
                       </span>
                     </div>
-                    <p className="text-lg font-medium">Match Score</p>
+                    <Badge
+                      variant={result.match_score >= 75 ? 'success' : result.match_score >= 50 ? 'warning' : 'error'}
+                      className="text-sm px-3 py-1"
+                    >
+                      {result.match_score >= 75 ? 'High Match' : result.match_score >= 50 ? 'Medium Match' : 'Low Match'}
+                    </Badge>
+                  </div>
+                  <div className={cn(
+                    'px-8 py-5 border-t border-border',
+                    result.match_score >= 75
+                      ? 'bg-success/5'
+                      : result.match_score >= 50
+                        ? 'bg-amber-500/5'
+                        : 'bg-error/5',
+                  )}>
+                    <p className="font-semibold text-sm mb-1">
+                      {result.match_score >= 75
+                        ? 'Job match is high, we can help you stand out'
+                        : result.match_score >= 50
+                          ? 'Decent match, we can help improve your chances'
+                          : 'Low match, here\u2019s how to bridge the gap'}
+                    </p>
+                    <p className="text-sm text-text-muted">
+                      {result.match_score >= 75
+                        ? 'Your profile and resume match the required qualifications well.'
+                        : result.match_score >= 50
+                          ? 'You have some relevant skills, but a few key areas need attention.'
+                          : 'Your profile needs significant improvement to match this role.'}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
+                    <button
+                      onClick={() => document.getElementById('match-details')?.scrollIntoView({ behavior: 'smooth' })}
+                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors"
+                    >
+                      <ChevronDown className="h-4 w-4" /> Show match details
+                    </button>
+                    <button
+                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors"
+                    >
+                      <PenLine className="h-4 w-4" /> Tailor my resume
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
+                    <button
+                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors"
+                    >
+                      <Sparkles className="h-4 w-4" /> Help me stand out
+                    </button>
+                    <button
+                      className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-light/50 transition-colors"
+                    >
+                      <FileEdit className="h-4 w-4" /> Create cover letter
+                    </button>
+                  </div>
+                  <div className="border-t border-border px-8 py-2.5 text-center">
+                    <span className="text-[11px] text-text-muted">
+                      BETA &bull; Is this information helpful?
+                    </span>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card id="match-details">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="h-5 w-5 text-primary" /> Keyword Coverage
