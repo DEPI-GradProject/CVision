@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { ToastProvider } from '@/components/Toast'
-import { SidebarLayout } from '@/layouts/SidebarLayout'
+import { MainLayout } from '@/layouts/MainLayout'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { HomePage } from '@/pages/HomePage'
 import { UploadPage } from '@/pages/UploadPage'
@@ -18,7 +18,7 @@ function App() {
         <ToastProvider>
           <AuthProvider>
             <Routes>
-              <Route element={<SidebarLayout />}>
+              <Route element={<MainLayout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
