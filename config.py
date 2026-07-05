@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     auth_jwt_secret: str = ""
     auth_jwt_lifetime_seconds: int = 3600
 
+    cors_origins: str = "*"
+
     @property
     def database_url_with_ssl(self) -> str:
         url = self.database_url

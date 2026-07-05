@@ -43,6 +43,14 @@ from utils.file_handler import extract_text_from_docx, extract_text_from_pdf
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+
+def _rate_limit_key(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return get_remote_address(request)
+
+
 engine = create_engine(
     settings.database_url_with_ssl,
     pool_pre_ping=True,
@@ -55,9 +63,10 @@ app = FastAPI(
     title="CVision Core API", description="Backend infrastructure for job data and CV processing", version="0.2.0"
 )
 
+cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,7 +81,7 @@ if settings.sentry_dsn:
     )
     logger.info("Sentry initialized")
 
-limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+limiter = Limiter(key_func=_rate_limit_key, default_limits=["60/minute"])
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -99,7 +108,14 @@ class UserUpdate(CreateUpdateDictModel):
     password: str | None = None
 
 
-def _save_analysis(user_id: int, filename: str, ats_score: int | None, skills: list[str], job_matches: int, matched_jobs: list[dict] | None = None):
+def _save_analysis(
+    user_id: int,
+    filename: str,
+    ats_score: int | None,
+    skills: list[str],
+    job_matches: int,
+    matched_jobs: list[dict] | None = None,
+):
     db = SessionLocal()
     try:
         record = AnalysisHistory(

@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/Data/faiss_db && chmod +x /app/start.sh
+RUN chmod +x /app/start.sh
 
 EXPOSE 8000
 

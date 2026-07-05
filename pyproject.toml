@@ -5,6 +5,9 @@ description = "AI-powered CV-to-Job matching platform with LangGraph agents and 
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi>=0.111.0,<1.0.0",
+    "uvicorn[standard]>=0.29.0,<1.0.0",
+    "psycopg2-binary>=2.9.9",
     "arxiv>=3.0.0",
     "chromadb>=1.5.9",
     "dotenv>=0.9.9",
