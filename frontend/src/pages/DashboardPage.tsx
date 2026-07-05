@@ -479,19 +479,11 @@ export function DashboardPage() {
                                     Loading matching jobs...
                                   </div>
                                 ) : (jobsCache.get(h.id) ?? []).length === 0 ? (
-                                  <div className="py-4 text-center">
-                                    <p className="text-sm text-text-muted">No matching jobs found in database</p>
-                                    {h.skills_extracted.length > 0 && (
-                                      <a
-                                        href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(h.skills_extracted.slice(0, 3).join(' '))}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-                                      >
-                                        <ExternalLink className="h-3 w-3" />
-                                        Search live jobs on LinkedIn
-                                      </a>
-                                    )}
+                                  <div className="py-4 text-center space-y-2">
+                                    <p className="text-sm text-text-muted">
+                                      {h.job_matches} matches were found during analysis in a larger job database.
+                                      The {h.job_matches} most recent listings don't include matching roles.
+                                    </p>
                                   </div>
                                 ) : (
                                   (jobsCache.get(h.id) ?? []).map((job) => (
@@ -523,7 +515,7 @@ export function DashboardPage() {
                                     </div>
                                   ))
                                 )}
-                                {!jobsLoading.has(h.id) && h.skills_extracted.length > 0 && (
+                                {h.skills_extracted.length > 0 && (
                                   <a
                                     href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(h.skills_extracted.slice(0, 3).join(' '))}`}
                                     target="_blank"
