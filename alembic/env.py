@@ -16,8 +16,10 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Strip +asyncpg for sync Alembic engine
 db_url = settings.database_url_with_ssl
 if db_url:
+    db_url = db_url.replace("+asyncpg", "")
     config.set_main_option("sqlalchemy.url", db_url)
 
 target_metadata = Base.metadata

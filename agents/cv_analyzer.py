@@ -1,6 +1,7 @@
 # agents/cv_analyzer.py
 
 import json
+import re
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -100,7 +101,7 @@ def compute_ats(data: dict) -> dict:
         content_score -= 10
         issues.append("Consider adding more action verbs")
 
-    personal_info_found = [kw for kw in PERSONAL_INFO_KEYWORDS if kw in cv_text]
+    personal_info_found = [kw for kw in PERSONAL_INFO_KEYWORDS if re.search(rf"\b{re.escape(kw)}\b", cv_text)]
     if personal_info_found:
         content_score -= 20
         issues.append(f"Personal info found that may hurt ATS: {', '.join(personal_info_found)}")

@@ -23,6 +23,7 @@ services:
     env_file:
       - .env
     environment:
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
       DATABASE_URL: postgresql+asyncpg://cvision:${POSTGRES_PASSWORD:-cvision}@db:5432/cvision
     volumes:
       - ./Data:/app/Data

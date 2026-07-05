@@ -20,11 +20,17 @@ done
 
 alembic upgrade head
 
-if [ ! -f "Data/faiss_db/index.faiss" ] && [ -f "Data/jobs.csv" ]; then
-    echo "Building FAISS index..."
-    python utils/ingest.py
-elif [ ! -f "Data/faiss_db/index.faiss" ]; then
-    echo "Skipping FAISS build: Data/jobs.csv not found"
+if [ ! -f "Data/faiss_db/index.faiss" ]; then
+    if [ -f "Data/jobs.csv" ]; then
+        echo "Building FAISS index..."
+        python utils/ingest.py
+        if [ $? -ne 0 ]; then
+            echo "FAISS build failed, but continuing..."
+        fi
+    else
+        echo "Skipping FAISS build: Data/jobs.csv not found"
+        echo "WARNING: Job matching features will fail until the FAISS index is built."
+    fi
 fi
 
 exec uvicorn api:app --host 0.0.0.0 --port 8000

@@ -62,6 +62,12 @@ exclude = ["*.ipynb", ".venv", ".git", "__pycache__"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+exclude = ["frontend/", "Data/", "tests/", "alembic/"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

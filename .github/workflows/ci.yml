@@ -48,7 +48,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[test]"
       - name: Run tests with coverage
-        run: python -m pytest tests/ -v --tb=short --cov=api --cov=auth --cov=models --cov=utils --cov-report=term-missing --cov-fail-under=30
+        run: python -m pytest tests/ -v --tb=short --cov=api --cov=auth --cov=models --cov=utils --cov=agents --cov=config --cov-report=term-missing --cov-fail-under=60
 
   audit:
     runs-on: ubuntu-latest
@@ -60,7 +60,7 @@ jobs:
       - name: Install pip-audit
         run: pip install pip-audit
       - name: Audit dependencies
-        run: pip-audit -r requirements.txt --desc
+        run: pip-audit --desc
 
   docker:
     runs-on: ubuntu-latest

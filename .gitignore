@@ -63,8 +63,10 @@ data/structured_jobs_cvision.json
 # Sample/personal CV files
 /Essam_Mohamed_.pdf
 
-# Windows filesystem encoding ghost
-erssyedgDocuments*
+
 
 # uv package manager lockfile
 /uv.lock
+
+# terminal artifact
+erssyedgDocumentsCVisionCVision*
