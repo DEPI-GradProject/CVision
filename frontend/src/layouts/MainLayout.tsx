@@ -11,7 +11,7 @@ export function MainLayout() {
     <div className="relative flex min-h-screen flex-col">
       <NebulaBackground />
       <Navbar />
-      <main className="relative z-10 flex-1">
+      <main className="relative z-10 flex-1 pt-14">
         <AnimatePresence mode="wait">
           <Outlet key={location.pathname} />
         </AnimatePresence>

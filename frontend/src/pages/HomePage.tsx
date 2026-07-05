@@ -7,6 +7,7 @@ import {
   Sparkles,
   Upload,
   Users,
+  CheckCircle,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -15,136 +16,115 @@ import { Badge } from '@/components/ui/badge'
 import { CardContent } from '@/components/ui/card'
 import { ScrollReveal } from '@/components/ScrollReveal'
 import { AnimatedPage } from '@/components/AnimatedPage'
-import {
-  staggerContainer,
-  staggerItem,
-  cardHover,
-} from '@/lib/animations'
+import { cn } from '@/lib/utils'
 
 const features = [
   {
     icon: FileSearch,
     title: 'Smart Parsing',
-    description: 'Extract skills, experience, and education from any CV format with AI-powered precision.',
-    gradient: 'from-violet-500/20 to-purple-500/20',
-    iconColor: 'text-violet-400',
+    description: 'AI extracts skills, experience, and education from any CV format with precision.',
+    color: 'from-violet-500 to-purple-500',
   },
   {
     icon: BarChart3,
     title: 'ATS Scoring',
-    description: 'Get a detailed compatibility score against top job descriptions in your field.',
-    gradient: 'from-emerald-500/20 to-teal-500/20',
-    iconColor: 'text-emerald-400',
+    description: 'Get a detailed compatibility score and know exactly where you stand.',
+    color: 'from-emerald-500 to-teal-500',
   },
   {
     icon: Brain,
     title: 'Job Matching',
-    description: 'Find the best-fitting roles from our curated database of live job listings.',
-    gradient: 'from-amber-500/20 to-orange-500/20',
-    iconColor: 'text-amber-400',
+    description: 'Find the best-fitting roles from thousands of live listings.',
+    color: 'from-amber-500 to-orange-500',
   },
   {
     icon: Users,
-    title: 'Insights',
-    description: 'Understand market demand for your skills and identify growth opportunities.',
-    gradient: 'from-sky-500/20 to-blue-500/20',
-    iconColor: 'text-sky-400',
+    title: 'Market Insights',
+    description: 'Understand demand for your skills and identify growth opportunities.',
+    color: 'from-sky-500 to-blue-500',
   },
 ]
 
 const steps = [
-  { number: '01', title: 'Upload CV', description: 'Drag & drop your PDF or DOCX file.' },
-  { number: '02', title: 'AI Analysis', description: 'Our agents parse, score, and match in real-time.' },
-  { number: '03', title: 'Get Results', description: 'View your ATS score, matched jobs, and full report.' },
+  { icon: Upload, title: 'Upload CV', description: 'Drop your PDF or DOCX file, or paste your text.' },
+  { icon: Brain, title: 'AI Analysis', description: 'Our agents parse, score, and match in real-time.' },
+  { icon: FileText, title: 'Get Results', description: 'View ATS score, matched jobs, and full report.' },
 ]
 
-function FloatingOrb({ className, delay = 0 }: { className: string; delay?: number }) {
+function SpringDiv({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: React.ReactNode
+  className?: string
+  delay?: number
+}) {
   return (
     <motion.div
-      className={cn('pointer-events-none absolute rounded-full blur-[120px]', className)}
-      animate={{
-        y: [0, -30, 0, 20, 0],
-        x: [0, 20, -10, 10, 0],
-        scale: [1, 1.05, 0.95, 1.02, 1],
-      }}
-      transition={{ duration: 10 + delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
   )
 }
-
-import { cn } from '@/lib/utils'
 
 export function HomePage() {
   return (
     <AnimatedPage>
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <FloatingOrb className="-top-40 right-0 h-[500px] w-[500px] bg-violet-600/10 dark:bg-violet-600/10" delay={0} />
-          <FloatingOrb className="-bottom-40 left-0 h-[400px] w-[400px] bg-indigo-500/10 dark:bg-indigo-500/10" delay={3} />
-          <FloatingOrb className="top-1/3 left-1/4 h-[300px] w-[300px] bg-purple-500/10 dark:bg-purple-500/10" delay={6} />
-        </div>
-
-        <section className="relative mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 lg:px-8">
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            className="mx-auto max-w-3xl text-center"
-          >
-            <motion.div variants={staggerItem}>
-              <Badge variant="default" className="mb-6 px-4 py-1.5 text-sm">
-                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                AI-Powered CV Analysis
-              </Badge>
-            </motion.div>
-
-            <motion.h1
-              variants={staggerItem}
-              className="text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl"
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section className="flex min-h-[calc(100vh-5rem)] flex-col items-center justify-center pb-16 pt-20">
+          <SpringDiv delay={0}>
+            <Badge
+              variant="default"
+              className="mb-6 rounded-full px-5 py-2 text-xs font-medium tracking-wide uppercase"
             >
-              Transform Your CV Into{' '}
-              <span className="bg-gradient-to-r from-violet-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              AI-Powered CV Analysis
+            </Badge>
+          </SpringDiv>
+
+          <SpringDiv delay={0.1} className="max-w-3xl text-center">
+            <h1 className="text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl/none leading-[1.05]">
+              Transform Your CV
+              <br />
+              <span className="bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
                 Career Opportunities
               </span>
-            </motion.h1>
+            </h1>
+          </SpringDiv>
 
-            <motion.p
-              variants={staggerItem}
-              className="mt-6 text-lg leading-relaxed text-text-secondary sm:text-xl"
-            >
+          <SpringDiv delay={0.2} className="mt-5 max-w-xl text-center">
+            <p className="text-lg leading-relaxed text-text-secondary sm:text-xl">
               Upload your CV and let AI analyze, score, and match it against thousands of jobs.
               Get actionable insights to land your dream role.
-            </motion.p>
+            </p>
+          </SpringDiv>
 
-            <motion.div
-              variants={staggerItem}
-              className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
-            >
-              <Link to="/upload">
-                <motion.div
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  <Button variant="gradient" size="xl" className="animate-pulse-glow group">
-                    <Upload className="h-5 w-5 transition-transform group-hover:-translate-y-0.5" />
-                    Analyze Your CV
-                    <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
-                  </Button>
-                </motion.div>
-              </Link>
-              <Link to="/dashboard">
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                  <Button variant="outline" size="xl">
-                    View Dashboard
-                  </Button>
-                </motion.div>
-              </Link>
-            </motion.div>
+          <SpringDiv delay={0.3} className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
+            <Link to="/upload">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                <Button variant="gradient" size="xl" className="text-base">
+                  <Upload className="h-5 w-5" />
+                  Analyze Your CV
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </motion.div>
+            </Link>
+            <Link to="/dashboard">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                <Button variant="outline" size="xl" className="text-base">
+                  View Dashboard
+                </Button>
+              </motion.div>
+            </Link>
+          </SpringDiv>
 
-            <motion.div
-              variants={staggerItem}
-              className="mt-8 flex items-center justify-center gap-6 text-sm text-text-muted"
-            >
+          <SpringDiv delay={0.4} className="mt-8">
+            <div className="flex items-center gap-5 text-sm text-text-muted">
               <span className="flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5" /> PDF & DOCX
               </span>
@@ -152,88 +132,108 @@ export function HomePage() {
               <span>Free to use</span>
               <span className="h-1 w-1 rounded-full bg-border" />
               <span>10MB max</span>
-            </motion.div>
-          </motion.div>
+            </div>
+          </SpringDiv>
         </section>
 
-        <section className="relative mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-60px' }}
-            className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            {features.map((feature) => (
-              <motion.div key={feature.title} variants={staggerItem}>
+        <section className="pb-28">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {features.map((feature, i) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              >
                 <motion.div
-                  whileHover="hover"
-                  initial="rest"
-                  variants={cardHover}
-                  className="group h-full rounded-2xl border border-border bg-surface/80 backdrop-blur-xl shadow-xl transition-colors hover:bg-surface"
+                  whileHover={{ y: -4, scale: 1.01 }}
+                  className="group h-full rounded-3xl border border-border/50 bg-white/60 dark:bg-white/[0.03] backdrop-blur-xl p-7 transition-all duration-300 hover:border-border/80 hover:bg-white/80 dark:hover:bg-white/[0.06] hover:shadow-glass-lg dark:hover:shadow-glass-dark"
                 >
-                  <CardContent className="p-6">
-                    <motion.div
-                      className={cn(
-                        'mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-muted transition-all',
-                        feature.iconColor,
-                      )}
-                      whileHover={{ rotate: [0, -10, 10, -5, 0], transition: { duration: 0.5 } }}
-                    >
-                      <feature.icon className="h-6 w-6" />
-                    </motion.div>
-                    <h3 className="mb-2 font-semibold">{feature.title}</h3>
-                    <p className="text-sm leading-relaxed text-text-secondary">
-                      {feature.description}
-                    </p>
-                  </CardContent>
+                  <div
+                    className={cn(
+                      'mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br shadow-lg',
+                      feature.color,
+                    )}
+                  >
+                    <feature.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="mb-1.5 text-base font-semibold">{feature.title}</h3>
+                  <p className="text-sm leading-relaxed text-text-secondary">
+                    {feature.description}
+                  </p>
                 </motion.div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </section>
 
-        <section className="relative border-t border-border/50 bg-surface/50 pb-24 pt-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <ScrollReveal>
-              <div className="mx-auto mb-16 max-w-2xl text-center">
-                <h2 className="text-3xl font-bold sm:text-4xl">How It Works</h2>
-                <p className="mt-4 text-text-secondary">
-                  Three simple steps to transform your job search
-                </p>
-              </div>
-            </ScrollReveal>
-
-            <div className="grid gap-8 md:grid-cols-3">
-              {steps.map((step, i) => (
-                <ScrollReveal key={step.number} delay={i * 100}>
-                  <motion.div
-                    className="relative text-center"
-                    whileHover={{ y: -5 }}
-                    transition={{ type: 'spring', stiffness: 300 }}
-                  >
-                    {i < steps.length - 1 && (
-                      <motion.div
-                        initial={{ scaleX: 0 }}
-                        whileInView={{ scaleX: 1 }}
-                        viewport={{ once: true }}
-                        className="absolute left-[60%] top-8 hidden h-px w-[80%] origin-left border-t border-dashed border-border md:block"
-                      />
-                    )}
-                    <motion.div
-                      className="relative mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-500 text-lg font-bold text-white shadow-lg shadow-violet-500/25"
-                      whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
-                      transition={{ type: 'spring', stiffness: 400 }}
-                    >
-                      {step.number}
-                    </motion.div>
-                    <h3 className="mb-2 text-xl font-semibold">{step.title}</h3>
-                    <p className="text-text-secondary">{step.description}</p>
-                  </motion.div>
-                </ScrollReveal>
-              ))}
-            </div>
+        <section className="section-separator pb-28 pt-20">
+          <div className="mx-auto mb-16 max-w-xl text-center">
+            <SpringDiv>
+              <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">How It Works</h2>
+              <p className="mt-4 text-lg text-text-secondary">
+                Three simple steps to transform your job search
+              </p>
+            </SpringDiv>
           </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {steps.map((step, i) => (
+              <motion.div
+                key={step.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                className="relative"
+              >
+                {i < steps.length - 1 && (
+                  <div className="absolute left-[60%] top-10 hidden h-px w-[80%] md:block">
+                    <svg className="w-full" height="1" viewBox="0 0 100 1" preserveAspectRatio="none">
+                      <line x1="0" y1="0" x2="100" y2="0" stroke="currentColor" strokeDasharray="4 4" className="text-border" strokeWidth="0.5" />
+                    </svg>
+                  </div>
+                )}
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-500 shadow-xl shadow-violet-500/20">
+                    <motion.div
+                      whileHover={{ scale: 1.08, rotate: -5 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                    >
+                      <step.icon className="h-8 w-8 text-white" />
+                    </motion.div>
+                  </div>
+                  <div className="mb-2 text-xs font-semibold tracking-widest text-text-muted uppercase">
+                    Step {i + 1}
+                  </div>
+                  <h3 className="mb-1.5 text-xl font-semibold">{step.title}</h3>
+                  <p className="text-sm text-text-secondary">{step.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        <section className="section-separator pb-28 pt-20 text-center">
+          <SpringDiv>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Ready to elevate your career?
+            </h2>
+            <p className="mt-3 text-lg text-text-secondary">
+              Join thousands of job seekers who landed their dream roles with CVision.
+            </p>
+            <div className="mt-8">
+              <Link to="/upload">
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                  <Button variant="gradient" size="xl" className="text-base">
+                    Get Started Free
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+              </Link>
+            </div>
+          </SpringDiv>
         </section>
       </div>
     </AnimatedPage>

@@ -27,25 +27,25 @@ export function Navbar() {
 
   return (
     <motion.nav
-      initial={{ y: -20, opacity: 0 }}
+      initial={{ y: -16, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'sticky top-0 z-50 border-b transition-all duration-300',
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
         scrolled
-          ? 'border-border/50 bg-background/80 backdrop-blur-xl shadow-lg shadow-black/5'
-          : 'border-transparent bg-background/50 backdrop-blur-sm',
+          ? 'bg-white/70 dark:bg-black/70 apple-blur border-b border-border/50 shadow-glass dark:shadow-glass-dark'
+          : 'bg-transparent',
       )}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="group flex items-center gap-2">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="group flex items-center gap-2.5">
           <motion.div
-            whileHover={{ rotate: -15, scale: 1.1 }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-500 shadow-lg shadow-violet-500/25 transition-shadow group-hover:shadow-violet-500/40"
+            whileHover={{ rotate: -10, scale: 1.05 }}
+            className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-500 shadow-md"
           >
-            <Sparkles className="h-4 w-4 text-white" />
+            <Sparkles className="h-3.5 w-3.5 text-white" />
           </motion.div>
-          <span className="text-lg font-bold tracking-tight">CVision</span>
+          <span className="text-base font-bold tracking-tight">CVision</span>
         </Link>
 
         <div className="hidden items-center gap-1 sm:flex">
@@ -53,11 +53,11 @@ export function Navbar() {
             <Link
               key={link.href}
               to={link.href}
-              className="relative px-4 py-2"
+              className="relative px-3.5 py-1.5"
             >
               <span
                 className={cn(
-                  'relative text-sm font-medium transition-colors',
+                  'relative text-xs font-medium tracking-wide transition-colors',
                   location.pathname === link.href
                     ? 'text-primary'
                     : 'text-text-secondary hover:text-text-primary',
@@ -68,7 +68,7 @@ export function Navbar() {
               {location.pathname === link.href && (
                 <motion.div
                   layoutId="nav-indicator"
-                  className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary"
+                  className="absolute -bottom-0.5 left-3.5 right-3.5 h-0.5 rounded-full bg-primary"
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
@@ -76,24 +76,24 @@ export function Navbar() {
           ))}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <ThemeToggleButton />
           {isAuthenticated ? (
             <div className="flex items-center gap-2">
-              <span className="hidden text-sm text-text-secondary md:block">{user?.email}</span>
-              <Button variant="ghost" size="sm" onClick={logout}>
-                <LogOut className="h-4 w-4" />
+              <span className="hidden text-xs text-text-secondary md:block">{user?.email}</span>
+              <Button variant="ghost" size="sm" onClick={logout} className="rounded-full h-8 w-8 p-0">
+                <LogOut className="h-3.5 w-3.5" />
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Link to="/login">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="rounded-full text-xs h-8 px-4">
                   Sign In
                 </Button>
               </Link>
               <Link to="/register">
-                <Button variant="gradient" size="sm">
+                <Button variant="gradient" size="sm" className="rounded-full text-xs h-8 px-4">
                   Sign Up
                 </Button>
               </Link>
