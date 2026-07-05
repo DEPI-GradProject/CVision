@@ -1,14 +1,21 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Briefcase, Upload, AlertCircle, CheckCircle2, XCircle, Lightbulb, Loader2 } from 'lucide-react'
+import { Briefcase, RefreshCw, AlertCircle, CheckCircle2, XCircle, Lightbulb, Loader2, FileText, Search, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import { AnimatedPage } from '@/components/AnimatedPage'
 import { cn } from '@/lib/utils'
 import { staggerContainer, staggerItem } from '@/lib/animations'
 import { api } from '@/api/client'
 import type { JobMatchResult } from '@/types'
+
+const loadingSteps = [
+  { icon: FileText, label: 'Parsing CV...' },
+  { icon: Search, label: 'Analyzing job...' },
+  { icon: BarChart3, label: 'Calculating match...' },
+]
 
 export function JobMatchPage() {
   const [cvFile, setCvFile] = useState<File | null>(null)
@@ -16,28 +23,47 @@ export function JobMatchPage() {
   const [jobDescription, setJobDescription] = useState('')
   const [result, setResult] = useState<JobMatchResult | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
     setCvFile(f)
-    const text = await f.text()
-    setCvText(text)
   }
 
   const handleMatch = async () => {
-    if (!cvText.trim() || !jobDescription.trim()) return
+    if (!jobDescription.trim()) return
+    if (!cvFile && !cvText.trim()) return
     setLoading(true)
     setError(null)
+    setResult(null)
+    setLoadingStep(0)
+    const stepTimer = setInterval(() => {
+      setLoadingStep((s) => Math.min(s + 1, loadingSteps.length - 1))
+    }, 3000)
     try {
-      const res = await api.matchJob(jobDescription, cvText)
+      let res
+      if (cvFile) {
+        res = await api.matchJobFile(cvFile, jobDescription)
+      } else {
+        res = await api.matchJob(jobDescription, cvText)
+      }
       setResult(res)
     } catch (err: any) {
       setError(err.message || 'Failed to match job')
     } finally {
+      clearInterval(stepTimer)
       setLoading(false)
     }
+  }
+
+  const handleReset = () => {
+    setResult(null)
+    setError(null)
+    setCvText('')
+    setJobDescription('')
+    setCvFile(null)
   }
 
   return (
@@ -54,6 +80,7 @@ export function JobMatchPage() {
           </motion.div>
         </motion.div>
 
+        {!result && (
         <div className="mx-auto mt-12 grid max-w-5xl gap-8 lg:grid-cols-2">
           <Card>
             <CardHeader>
@@ -62,13 +89,16 @@ export function JobMatchPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Upload CV file</label>
+                <label className="block text-sm font-medium mb-2">Upload CV (PDF/DOCX)</label>
                 <input
                   type="file"
-                  accept=".txt,.pdf,.docx"
+                  accept=".pdf,.docx"
                   onChange={handleFileChange}
                   className="w-full rounded-lg border border-border bg-surface-light px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:text-white"
                 />
+                {cvFile && (
+                  <p className="mt-1 text-xs text-text-muted">Using: {cvFile.name}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Or paste CV text</label>
@@ -99,7 +129,7 @@ export function JobMatchPage() {
               <Button
                 variant="gradient"
                 className="w-full"
-                disabled={!cvText.trim() || !jobDescription.trim() || loading}
+                disabled={(!cvFile && !cvText.trim()) || !jobDescription.trim() || loading}
                 onClick={handleMatch}
               >
                 {loading ? (
@@ -111,6 +141,35 @@ export function JobMatchPage() {
             </CardContent>
           </Card>
         </div>
+        )}
+
+        {loading && !result && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mx-auto mt-8 max-w-md"
+          >
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                {loadingSteps.map((step, i) => (
+                  <div key={step.label} className="flex items-center gap-3">
+                    <step.icon className={cn(
+                      'h-5 w-5',
+                      i <= loadingStep ? 'text-primary animate-pulse' : 'text-text-muted',
+                    )} />
+                    <span className={cn(
+                      'text-sm',
+                      i <= loadingStep ? 'text-text-primary font-medium' : 'text-text-muted',
+                    )}>
+                      {step.label}
+                    </span>
+                    {i < loadingStep && <CheckCircle2 className="ml-auto h-4 w-4 text-success" />}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {error && (
           <motion.div
@@ -154,6 +213,29 @@ export function JobMatchPage() {
                       </span>
                     </div>
                     <p className="text-lg font-medium">Match Score</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-primary" /> Keyword Coverage
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4">
+                    <Progress
+                      value={result.keyword_coverage * 100}
+                      variant={result.keyword_coverage >= 0.7 ? 'success' : result.keyword_coverage >= 0.4 ? 'warning' : 'error'}
+                      className="flex-1"
+                    />
+                    <span className={cn(
+                      'text-sm font-medium whitespace-nowrap',
+                      result.keyword_coverage >= 0.7 ? 'text-success' : result.keyword_coverage >= 0.4 ? 'text-amber-400' : 'text-error',
+                    )}>
+                      {Math.round(result.keyword_coverage * 100)}%
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -223,6 +305,12 @@ export function JobMatchPage() {
                   </ol>
                 </CardContent>
               </Card>
+
+              <div className="flex justify-center">
+                <Button variant="outline" onClick={handleReset} className="gap-2">
+                  <RefreshCw className="h-4 w-4" /> Try Another Job
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -198,6 +198,40 @@ export const api = {
       matched_skills: string[]
       missing_skills: string[]
       improvement_tips: string[]
+      keyword_coverage: number
+    }>(res)
+  },
+
+  matchJobFile: async (file: File, jobDescription: string) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('job_description', jobDescription)
+    const res = await fetch(`${API_BASE}/match-job/file`, {
+      method: 'POST',
+      headers: { ...authHeaders() },
+      body: form,
+    })
+    return handleResponse<{
+      match_score: number
+      matched_skills: string[]
+      missing_skills: string[]
+      improvement_tips: string[]
+      keyword_coverage: number
+    }>(res)
+  },
+
+  getRewriteSuggestions: async (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${API_BASE}/rewrite-suggestions`, {
+      method: 'POST',
+      headers: { ...authHeaders() },
+      body: form,
+    })
+    return handleResponse<{
+      overall_assessment: string
+      rewrites: Array<{ original: string; issue: string; improved: string }>
+      quick_wins: string[]
     }>(res)
   },
 

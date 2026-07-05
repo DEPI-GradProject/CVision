@@ -51,6 +51,19 @@ export interface JobMatchResult {
   matched_skills: string[]
   missing_skills: string[]
   improvement_tips: string[]
+  keyword_coverage: number
+}
+
+export interface RewriteSuggestion {
+  original: string
+  issue: string
+  improved: string
+}
+
+export interface RewriteResult {
+  overall_assessment: string
+  rewrites: RewriteSuggestion[]
+  quick_wins: string[]
 }
 
 export interface MarketSkill {

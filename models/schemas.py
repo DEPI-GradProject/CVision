@@ -80,6 +80,19 @@ class JobMatchResult(BaseModel):
     matched_skills: list[str]
     missing_skills: list[str]
     improvement_tips: list[str]
+    keyword_coverage: float = 0.0
+
+
+class RewriteSuggestion(BaseModel):
+    original: str
+    issue: str
+    improved: str
+
+
+class RewriteResult(BaseModel):
+    overall_assessment: str
+    rewrites: list[RewriteSuggestion]
+    quick_wins: list[str]
 
 
 class MarketSkill(BaseModel):

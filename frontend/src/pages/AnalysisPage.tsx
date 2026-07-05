@@ -8,12 +8,16 @@ import {
   BarChart3,
   Brain,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clipboard,
   FileSearch,
   FileText,
   Loader2,
   Sparkles,
   Target,
   TrendingUp,
+  XCircle,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
@@ -25,7 +29,7 @@ import { AnimatedPage } from '@/components/AnimatedPage'
 import { useToast } from '@/components/Toast'
 import { cn } from '@/lib/utils'
 import { staggerContainer, staggerItem } from '@/lib/animations'
-import type { CVAnalysisResult, SSEEvent, MarketSkill } from '@/types'
+import type { CVAnalysisResult, SSEEvent, MarketSkill, RewriteResult } from '@/types'
 
 const stepLabels: Record<string, string> = {
   parser: 'Parsing CV content...',
@@ -300,6 +304,149 @@ function SkillsGap({ skills }: { skills: string[] }) {
   )
 }
 
+function RewriteSuggestions({ file }: { file: File }) {
+  const [rewriteResult, setRewriteResult] = useState<RewriteResult | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [checked, setChecked] = useState<Set<number>>(new Set())
+  const { toast } = useToast()
+
+  const handleGenerate = async () => {
+    setLoading(true)
+    setExpanded(true)
+    try {
+      const res = await api.getRewriteSuggestions(file)
+      setRewriteResult(res)
+      toast('Rewrite suggestions ready!', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Failed to generate suggestions', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleCheck = (i: number) => {
+    setChecked((prev) => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      return next
+    })
+  }
+
+  const copyAll = () => {
+    if (!rewriteResult) return
+    const text = rewriteResult.rewrites.map((r) => r.improved).join('\n\n')
+    navigator.clipboard.writeText(text)
+    toast('Improvements copied to clipboard!', 'success')
+  }
+
+  return (
+    <ScrollReveal>
+      <Card>
+        <CardHeader className="pb-3">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex w-full items-center justify-between"
+          >
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5 text-amber-400" /> CV Rewrite Suggestions
+            </CardTitle>
+            {expanded ? <ChevronDown className="h-5 w-5 text-text-muted" /> : <ChevronRight className="h-5 w-5 text-text-muted" />}
+          </button>
+          <CardDescription>AI-powered suggestions to improve your CV bullets</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!expanded && (
+            <Button variant="outline" onClick={handleGenerate} disabled={loading}>
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</> : <>Generate Suggestions</>}
+            </Button>
+          )}
+          {expanded && !rewriteResult && !loading && (
+            <Button variant="outline" onClick={handleGenerate}>
+              Generate Suggestions
+            </Button>
+          )}
+          {expanded && loading && (
+            <div className="flex items-center gap-3 py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm text-text-secondary">AI is rewriting your CV bullets...</span>
+            </div>
+          )}
+          {expanded && rewriteResult && (
+            <div className="space-y-6">
+              <div className="rounded-lg bg-primary-muted/50 p-4 text-sm text-text-secondary leading-relaxed">
+                {rewriteResult.overall_assessment}
+              </div>
+
+              {rewriteResult.rewrites.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">Suggested Rewrites</h4>
+                  {rewriteResult.rewrites.map((r, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="rounded-lg border border-border p-4 space-y-3"
+                    >
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">Original:</p>
+                        <p className="text-sm text-error line-through">{r.original}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">Issue:</p>
+                        <p className="text-sm text-text-secondary">{r.issue}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">Improved:</p>
+                        <p className="text-sm text-success">{r.improved}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+
+              {rewriteResult.quick_wins.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Quick Wins</h4>
+                  <div className="space-y-2">
+                    {rewriteResult.quick_wins.map((win, i) => (
+                      <label
+                        key={i}
+                        className="flex items-start gap-3 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked.has(i)}
+                          onChange={() => toggleCheck(i)}
+                          className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+                        />
+                        <span className={cn(
+                          'text-sm',
+                          checked.has(i) ? 'text-text-muted line-through' : 'text-text-secondary',
+                        )}>
+                          {win}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button variant="outline" size="sm" onClick={copyAll} className="gap-2">
+                  <Clipboard className="h-4 w-4" /> Copy All Improvements
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </ScrollReveal>
+  )
+}
+
 export function AnalysisPage() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -562,6 +709,8 @@ export function AnalysisPage() {
                 </Card>
               </ScrollReveal>
             )}
+
+            <RewriteSuggestions file={file} />
 
             <motion.div
               variants={staggerContainer}

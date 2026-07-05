@@ -2,12 +2,13 @@ import asyncio
 import json
 import logging
 import os
+import re
 import tempfile
 from datetime import UTC, datetime
 
 import pandas as pd
 import sentry_sdk
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi_users.schemas import CreateUpdateDictModel
@@ -25,7 +26,8 @@ from auth import auth_backend, current_active_user, fastapi_users
 from config import settings
 from graph.workflow import graph
 from models.db_models import AnalysisHistory, User
-from models.schemas import AgentState, JobMatchRequest, JobMatchResult, MarketSkill
+from models.schemas import AgentState, JobMatchRequest, JobMatchResult, MarketSkill, RewriteResult, RewriteSuggestion
+from utils.file_handler import extract_text_from_docx, extract_text_from_pdf
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -99,8 +101,15 @@ def _save_analysis(user_id: int, filename: str, ats_score: int | None, skills: l
         )
         db.add(record)
         db.commit()
+        logger.info(
+            "Saved analysis history for user_id=%s: score=%s, skills=%s, jobs=%s",
+            user_id,
+            ats_score,
+            len(skills),
+            job_matches,
+        )
     except Exception as e:
-        logger.error("Failed to save analysis history: %s", e)
+        logger.error("Failed to save analysis history for user_id=%s: %s", user_id, e)
         db.rollback()
     finally:
         db.close()
@@ -192,11 +201,12 @@ def get_analysis_history(request: Request, user: User = Depends(current_active_u
                         "created_at": r.created_at.isoformat(),
                     }
                 )
+            logger.info("History query for user_id=%s: %s records found", user.id, len(data))
             return {"status": "success", "data": data}
         finally:
             db.close()
     except Exception as e:
-        logger.error("Failed to fetch analysis history: %s", e, exc_info=True)
+        logger.error("Failed to fetch analysis history for user_id=%s: %s", user.id, e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -251,7 +261,7 @@ def _get_match_llm():
 
 
 _match_prompt = PromptTemplate.from_template("""
-You are a job matching expert. Compare the candidate's CV with the job description.
+You are an expert ATS and career coach. Given a CV and a job description, analyze the match.
 
 CV TEXT:
 {cv_text}
@@ -259,22 +269,32 @@ CV TEXT:
 JOB DESCRIPTION:
 {job_description}
 
-Analyze how well the candidate's skills and experience match this job.
-
 Return ONLY valid JSON (no markdown, no explanation):
 {{
   "match_score": <0-100>,
   "matched_skills": ["skill1", "skill2"],
   "missing_skills": ["skill3", "skill4"],
-  "improvement_tips": ["tip1", "tip2", "tip3"]
+  "improvement_tips": ["tip1", "tip2", "tip3"],
+  "keyword_coverage": <0.0-1.0>
 }}
 
 Rules:
 - match_score: percentage of job requirements the candidate meets
-- matched_skills: skills the candidate has that the job requires
-- missing_skills: skills the job requires but the candidate lacks
-- improvement_tips: 2-4 specific actions to improve fit
+- matched_skills: skills in CV that match job requirements
+- missing_skills: important skills in job not found in CV
+- improvement_tips: 3-5 specific actionable tips to improve the match
+- keyword_coverage: percentage (0.0-1.0) of job keywords found in CV
 """)
+
+
+def _extract_json(text: str) -> str:
+    clean = text.strip()
+    clean = re.sub(r"```(?:json)?\s*", "", clean)
+    start = clean.find("{")
+    end = clean.rfind("}")
+    if start == -1 or end == -1 or start >= end:
+        raise ValueError("No valid JSON object in LLM response")
+    return clean[start : end + 1]
 
 
 @app.post("/api/v1/match-job")
@@ -284,16 +304,171 @@ def match_job(request: Request, body: JobMatchRequest, user: User = Depends(curr
         llm = _get_match_llm()
         chain = _match_prompt | llm | StrOutputParser()
         result = chain.invoke({"cv_text": body.cv_text, "job_description": body.job_description})
-        clean = result.strip()
-        if "```json" in clean:
-            clean = clean.split("```json")[1].split("```")[0].strip()
-        elif "```" in clean:
-            clean = clean.split("```")[1].split("```")[0].strip()
+        if not result or not result.strip():
+            raise ValueError("LLM returned empty response")
+        clean = _extract_json(result)
         data = json.loads(clean)
+        _save_analysis(
+            user.id,
+            f"job_match_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
+            data.get("match_score"),
+            data.get("matched_skills", []),
+            1,
+        )
         return JobMatchResult(**data)
     except Exception as e:
         logger.error("Match job error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to match job: " + str(e))
+
+
+@app.post("/api/v1/match-job/file")
+@limiter.limit("5/minute")
+def match_job_file(
+    request: Request,
+    file: UploadFile = File(...),
+    job_description: str = Form(...),
+    user: User = Depends(current_active_user),
+):
+    allowed = {"pdf", "docx"}
+    ext = file.filename.split(".")[-1].lower() if file.filename else ""
+    if ext not in allowed:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: .{ext}. Use PDF or DOCX.")
+    try:
+        contents = file.file.read()
+        file_size = len(contents)
+        max_size = 10 * 1024 * 1024
+        if file_size > max_size:
+            raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
+            tmp.write(contents)
+            tmp_path = tmp.name
+
+        try:
+            if ext == "pdf":
+                cv_text = extract_text_from_pdf(tmp_path)
+            else:
+                cv_text = extract_text_from_docx(tmp_path)
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+        if not cv_text.strip():
+            raise ValueError("No text could be extracted from the file")
+
+        llm = _get_match_llm()
+        chain = _match_prompt | llm | StrOutputParser()
+        result = chain.invoke({"cv_text": cv_text, "job_description": job_description})
+        if not result or not result.strip():
+            raise ValueError("LLM returned empty response")
+        clean = _extract_json(result)
+        data = json.loads(clean)
+        _save_analysis(
+            user.id,
+            f"job_match_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
+            data.get("match_score"),
+            data.get("matched_skills", []),
+            1,
+        )
+        return JobMatchResult(**data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Match job file error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to match job: " + str(e))
+
+
+_rewrite_llm = None
+
+
+def _get_rewrite_llm():
+    global _rewrite_llm
+    if _rewrite_llm is None:
+        _rewrite_llm = ChatGroq(model=settings.groq_model_large, temperature=0.2)
+    return _rewrite_llm
+
+
+_rewrite_prompt = PromptTemplate.from_template("""
+You are an expert CV writer and career coach. Analyze this CV and provide specific rewrite suggestions.
+
+CV TEXT:
+{cv_text}
+
+For each weak bullet point or section, provide:
+1. The original text (quote it exactly)
+2. Why it's weak
+3. A rewritten version that is stronger, more specific, and ATS-friendly
+
+Focus on: action verbs, quantifiable achievements, specific technologies.
+
+Return ONLY valid JSON (no markdown, no explanation):
+{{
+  "overall_assessment": "2-3 sentence assessment of the CV",
+  "rewrites": [
+    {{
+      "original": "original text",
+      "issue": "why it's weak",
+      "improved": "rewritten version"
+    }}
+  ],
+  "quick_wins": ["simple fix 1", "simple fix 2"]
+}}
+
+Rules:
+- overall_assessment: brief overall evaluation of CV quality
+- rewrites: 3-5 specific rewrite suggestions with original, issue, and improved versions
+- quick_wins: 2-4 simple fixes that take less than 5 minutes
+""")
+
+
+@app.post("/api/v1/rewrite-suggestions")
+@limiter.limit("3/minute")
+def rewrite_suggestions(request: Request, file: UploadFile = File(...), user: User = Depends(current_active_user)):
+    allowed = {"pdf", "docx"}
+    ext = file.filename.split(".")[-1].lower() if file.filename else ""
+    if ext not in allowed:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: .{ext}. Use PDF or DOCX.")
+    try:
+        contents = file.file.read()
+        file_size = len(contents)
+        max_size = 10 * 1024 * 1024
+        if file_size > max_size:
+            raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
+            tmp.write(contents)
+            tmp_path = tmp.name
+
+        try:
+            if ext == "pdf":
+                cv_text = extract_text_from_pdf(tmp_path)
+            else:
+                cv_text = extract_text_from_docx(tmp_path)
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+        if not cv_text.strip():
+            raise ValueError("No text could be extracted from the file")
+
+        llm = _get_rewrite_llm()
+        chain = _rewrite_prompt | llm | StrOutputParser()
+        result = chain.invoke({"cv_text": cv_text})
+        if not result or not result.strip():
+            raise ValueError("LLM returned empty response")
+        clean = _extract_json(result)
+        data = json.loads(clean)
+        rewrites = [RewriteSuggestion(**r) for r in data.get("rewrites", [])]
+        return RewriteResult(
+            overall_assessment=data.get("overall_assessment", ""),
+            rewrites=rewrites,
+            quick_wins=data.get("quick_wins", []),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Rewrite suggestions error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate rewrite suggestions: " + str(e))
 
 
 @app.get("/api/v1/skills/market-demand")

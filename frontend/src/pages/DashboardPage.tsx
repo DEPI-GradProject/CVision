@@ -10,7 +10,10 @@ import {
   TrendingUp,
   LineChart,
 } from 'lucide-react'
-import { LineChart as RechartsLine, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Line } from 'react-chartjs-2'
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip as ChartTooltip, Filler } from 'chart.js'
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, ChartTooltip, Filler)
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -171,28 +174,43 @@ export function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsLine
-                      data={[...history].reverse().map((h) => ({
-                        date: new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                        score: h.ats_score ?? 0,
-                      }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                      <XAxis dataKey="date" className="text-xs text-text-muted" tick={{ fill: 'currentColor' }} />
-                      <YAxis domain={[0, 100]} className="text-xs text-text-muted" tick={{ fill: 'currentColor' }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'var(--color-surface)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          color: 'var(--color-text-primary)',
-                        }}
-                        formatter={(value: number) => [`${value}/100`, 'ATS Score']}
-                      />
-                      <Line type="monotone" dataKey="score" stroke="var(--color-primary)" strokeWidth={2} dot={{ fill: 'var(--color-primary)', r: 4 }} />
-                    </RechartsLine>
-                  </ResponsiveContainer>
+                  <Line
+                    data={{
+                      labels: [...history].reverse().map((h) =>
+                        new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      ),
+                      datasets: [{
+                        label: 'ATS Score',
+                        data: [...history].reverse().map((h) => h.ats_score ?? 0),
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#6366f1',
+                      }],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148, 163, 184, 0.15)' } },
+                        y: { min: 0, max: 100, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148, 163, 184, 0.15)' } },
+                      },
+                      plugins: {
+                        tooltip: {
+                          backgroundColor: '#0f172a',
+                          borderColor: '#334155',
+                          borderWidth: 1,
+                          titleColor: '#f8fafc',
+                          bodyColor: '#94a3b8',
+                          callbacks: {
+                            label: (ctx) => `Score: ${ctx.parsed.y}/100`,
+                          },
+                        },
+                      },
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>
