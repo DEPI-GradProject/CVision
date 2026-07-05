@@ -31,9 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const saved = getAuthToken()
     if (saved) {
-      setToken(saved)
+      setToken(saved) // eslint-disable-line react-hooks/set-state-in-effect
       api.me()
-        .then(setUser)
+        .then((u) => { setUser(u) })
         .catch(() => {
           setToken(null)
           setAuthToken(null)
@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setIsLoading(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.logout()
     } catch {
+      // ignore logout errors
     }
     setAuthToken(null)
     setToken(null)
@@ -85,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider')

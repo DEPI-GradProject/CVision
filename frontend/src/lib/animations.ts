@@ -75,7 +75,7 @@ export const pageTransition = {
   transition: { duration: 0.3, ease: 'easeOut' as const },
 }
 
-export const numberCount = (_n: number) => ({
+export const numberCount = (): Variants => ({
   initial: { opacity: 0, y: 20 },
   animate: {
     opacity: 1,

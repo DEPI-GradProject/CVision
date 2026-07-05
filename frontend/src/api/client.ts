@@ -1,4 +1,4 @@
-import type { RawJob } from '@/types'
+import type { RawJob, SSEEvent } from '@/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 const API_BASE = `${API_BASE_URL}/api/v1`
@@ -100,7 +100,7 @@ export const api = {
     }>(res)
   },
 
-  analyzeCVStream: (file: File, onEvent: (event: any) => void, onError: (err: Error) => void): AbortController => {
+  analyzeCVStream: (file: File, onEvent: (event: SSEEvent) => void, onError: (err: Error) => void): AbortController => {
     const controller = new AbortController()
     const form = new FormData()
     form.append('file', file)

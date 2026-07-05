@@ -58,11 +58,8 @@ export function NebulaBackground() {
     }
     window.addEventListener('resize', handleResize)
 
-    let time = 0
-
     function draw() {
       if (!ctx) return
-      time += 0.003
       ctx.clearRect(0, 0, w, h)
 
       const particles = particlesRef.current

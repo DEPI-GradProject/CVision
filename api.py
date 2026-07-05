@@ -73,6 +73,8 @@ app = FastAPI(
 )
 
 cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+if cors_origins == ["*"]:
+    logger.warning("CORS configured with '*' — restrict CORS_ORIGINS in production")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -471,9 +473,6 @@ Only use quantifiable achievements that were already present in the original CV.
 Return ONLY the rewritten CV text, no explanations or extra formatting.
 """)
 
-_POST_TAILOR_REQ_SCHEMA = JobMatchRequest
-_POST_TAILOR_RESP_SCHEMA = TailorResumeResult
-
 
 @app.post("/api/v1/tailor-resume")
 @limiter.limit("5/minute")
@@ -527,9 +526,6 @@ Rules:
 - Do NOT invent numbers or metrics not in the CV
 """)
 
-_POST_STANDOUT_REQ_SCHEMA = JobMatchRequest
-_POST_STANDOUT_RESP_SCHEMA = StandOutSuggestion
-
 
 @app.post("/api/v1/stand-out")
 @limiter.limit("5/minute")
@@ -580,9 +576,6 @@ Keep it professional, concise, and tailored to the job.
 
 Return ONLY the cover letter text, no explanations.
 """)
-
-_POST_COVER_REQ_SCHEMA = CoverLetterRequest
-_POST_COVER_RESP_SCHEMA = CoverLetterResult
 
 
 @app.post("/api/v1/cover-letter")
@@ -743,8 +736,9 @@ def get_market_skill_demand(request: Request, user: User = Depends(current_activ
             rows = []
             for skill in common_skills:
                 like = f"%{skill}%"
+                like_op = "LIKE" if _is_sqlite else "ILIKE"
                 r = conn.execute(
-                    text("SELECT COUNT(*) FROM jobs_raw WHERE description ILIKE :s"),
+                    text(f"SELECT COUNT(*) FROM jobs_raw WHERE description {like_op} :s"),
                     {"s": like},
                 ).scalar()
                 if r and r > 0:
@@ -866,9 +860,10 @@ def _search_jobs_raw(skills: list[str], limit: int = 5) -> list[dict]:
         return []
     try:
         conditions = []
+        like_op = "LIKE" if _is_sqlite else "ILIKE"
         for skill in skills[:5]:
             escaped = skill.replace("'", "''")
-            conditions.append(f"description ILIKE '%{escaped}%' OR job_title ILIKE '%{escaped}%'")
+            conditions.append(f"description {like_op} '%{escaped}%' OR job_title {like_op} '%{escaped}%'")
         skill_conditions = " OR ".join(conditions)
         query = text(f"""
             SELECT job_title, job_link, platform, description

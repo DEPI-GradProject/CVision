@@ -29,8 +29,8 @@ auth_backend = AuthenticationBackend(
 
 
 class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
-    reset_password_token_secret = settings.auth_jwt_secret
-    verification_token_secret = settings.auth_jwt_secret
+    reset_password_token_secret = settings.auth_reset_token_secret or settings.auth_jwt_secret
+    verification_token_secret = settings.auth_verification_token_secret or settings.auth_jwt_secret
 
     async def on_after_register(self, user: User, request: Request | None = None):
         logger.info("User %s (%s) registered", user.id, user.email)

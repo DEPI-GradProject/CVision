@@ -62,8 +62,8 @@ export function JobMatchPage() {
         res = await api.matchJob(jobDescription, cvText)
       }
       setResult(res)
-    } catch (err: any) {
-      setError(err.message || 'Failed to match job')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to match job')
     } finally {
       clearInterval(stepTimer)
       setLoading(false)
@@ -96,8 +96,8 @@ export function JobMatchPage() {
         res = await api.coverLetter(jobDescription, text)
       }
       setFeatureResult(res)
-    } catch (err: any) {
-      setFeatureError(err.message || 'Something went wrong')
+    } catch (err: unknown) {
+      setFeatureError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setFeatureLoading(false)
     }
@@ -115,7 +115,7 @@ export function JobMatchPage() {
       await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch {}
+    } catch { /* clipboard may be denied */ }
   }
 
   const closeModal = () => {

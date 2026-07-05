@@ -31,16 +31,12 @@ import { api, ApiError } from '@/api/client'
 import type { AnalysisHistory, DashboardStats, RawJob } from '@/types'
 
 function CountUp({ value, duration = 1000 }: { value: string; duration?: number }) {
-  const num = parseInt(value)
-  if (isNaN(num)) {
-    return <span className="text-2xl font-bold">{value}</span>
-  }
-
   const [count, setCount] = useState(0)
   const [show, setShow] = useState(false)
+  const num = parseInt(value)
 
   useEffect(() => {
-    setShow(true)
+    setShow(true) // eslint-disable-line react-hooks/set-state-in-effect
     let start = 0
     const step = 16
     const totalSteps = duration / step
@@ -58,6 +54,10 @@ function CountUp({ value, duration = 1000 }: { value: string; duration?: number 
 
     return () => clearInterval(timer)
   }, [num, duration])
+
+  if (isNaN(num)) {
+    return <span className="text-2xl font-bold">{value}</span>
+  }
 
   return (
     <motion.span

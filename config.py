@@ -27,6 +27,8 @@ class Settings(BaseSettings):
 
     auth_jwt_secret: str = ""
     auth_jwt_lifetime_seconds: int = 3600
+    auth_reset_token_secret: str = ""
+    auth_verification_token_secret: str = ""
 
     cors_origins: str = "*"
 

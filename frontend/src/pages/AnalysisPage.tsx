@@ -316,8 +316,8 @@ function RewriteSuggestions({ file }: { file: File }) {
       const res = await api.getRewriteSuggestions(file)
       setRewriteResult(res)
       toast('Rewrite suggestions ready!', 'success')
-    } catch (err: any) {
-      toast(err.message || 'Failed to generate suggestions', 'error')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Failed to generate suggestions', 'error')
     } finally {
       setLoading(false)
     }
@@ -454,7 +454,8 @@ export function AnalysisPage() {
   const controllerRef = useRef<AbortController | null>(null)
   const { toast } = useToast()
 
-  useEffect(() => { setJobsPage(0) }, [result])
+  useEffect(() => { setJobsPage(0) // eslint-disable-line react-hooks/set-state-in-effect
+  }, [result])
 
   const steps = ['parser', 'analyzer', 'analyzer_ats', 'matcher', 'reporter', 'complete']
 
@@ -464,7 +465,7 @@ export function AnalysisPage() {
       return
     }
 
-    setStep('parser')
+    setStep('parser') // eslint-disable-line react-hooks/set-state-in-effect
     toast('AI agents are analyzing your CV...', 'info')
 
     controllerRef.current = api.analyzeCVStream(

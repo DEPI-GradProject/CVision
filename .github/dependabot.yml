@@ -10,12 +10,16 @@ updates:
         patterns:
           - "langchain*"
           - "langgraph*"
-      frontend:
-        patterns:
-          - "streamlit"
       test:
         patterns:
           - "pytest*"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
     open-pull-requests-limit: 10
 
   - package-ecosystem: "docker"

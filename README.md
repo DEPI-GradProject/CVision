@@ -31,7 +31,7 @@ Upload → cv_parser → cv_analyzer → job_matcher → report_builder → Resu
 | **Rate Limiting** | slowapi (60/min default, 10/min auth, 5/min CV analysis) |
 | **Monitoring** | Sentry |
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4 |
-| **CI/CD** | GitHub Actions (lint, pre-commit, pytest, pip-audit, docker build) |
+| **CI/CD** | GitHub Actions (lint, pre-commit, pytest, pip-audit, mypy, docker build, Trivy) |
 
 ## API Endpoints
 
@@ -101,8 +101,7 @@ Key variables:
 
 ### 3. Backend
 ```bash
-pip install -r requirements.txt
-pip install -e ".[test]"            # optional: test deps
+pip install -e ".[test]"
 alembic upgrade head
 python utils/ingest.py              # build FAISS index
 uvicorn api:app --reload
@@ -119,7 +118,7 @@ npm run dev
 
 ### 5. Run tests
 ```bash
-pytest tests/ --cov=api --cov=auth --cov=models --cov=utils
+pytest tests/ --cov=api --cov=auth --cov=models --cov=utils --cov=agents --cov=graph
 ```
 
 ## Docker

@@ -3,7 +3,7 @@
 
 from typing import Annotated
 
-from pydantic import BaseModel, BeforeValidator
+from pydantic import BaseModel, BeforeValidator, Field
 
 
 def _coerce_skills(v):
@@ -71,8 +71,8 @@ class JobMatches(BaseModel):
 
 
 class JobMatchRequest(BaseModel):
-    job_description: str
-    cv_text: str
+    job_description: str = Field(..., max_length=50000)
+    cv_text: str = Field(..., max_length=100000)
 
 
 class JobMatchResult(BaseModel):
@@ -97,8 +97,8 @@ class StandOutSuggestion(BaseModel):
 
 
 class CoverLetterRequest(BaseModel):
-    job_description: str
-    cv_text: str
+    job_description: str = Field(..., max_length=50000)
+    cv_text: str = Field(..., max_length=100000)
 
 
 class CoverLetterResult(BaseModel):
