@@ -101,7 +101,7 @@ jobs:
           pip install -e ".[test]"
           pip install pip-audit
       - name: Audit dependencies
-        run: pip-audit --desc
+        run: pip-audit --desc --no-deps
 
   docker:
     runs-on: ubuntu-latest

@@ -1,14 +1,15 @@
+from collections.abc import AsyncGenerator
 from functools import lru_cache
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from config import settings
 
 
 @lru_cache
-def get_async_engine():
+def get_async_engine() -> AsyncEngine:
     url = settings.database_url_async
-    connect_args = {} if url.startswith("sqlite") else {"timeout": 10}
+    connect_args: dict[str, object] = {} if url.startswith("sqlite") else {"timeout": 10}
     return create_async_engine(
         url,
         echo=False,
@@ -19,11 +20,11 @@ def get_async_engine():
 
 
 @lru_cache
-def get_async_session_maker():
+def get_async_session_maker() -> async_sessionmaker[AsyncSession]:
     engine = get_async_engine()
     return async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
-async def get_async_session():
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with get_async_session_maker()() as session:
         yield session

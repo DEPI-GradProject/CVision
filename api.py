@@ -4,7 +4,9 @@ import logging
 import os
 import re
 import tempfile
+from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime
+from typing import Any
 
 import pandas as pd
 import sentry_sdk
@@ -147,7 +149,7 @@ def _save_analysis(
     skills: list[str],
     job_matches: int,
     matched_jobs: list[dict] | None = None,
-):
+) -> None:
     db = SessionLocal()
     try:
         record = AnalysisHistory(
@@ -193,7 +195,7 @@ app.include_router(
 
 
 @app.get("/")
-def home():
+def home() -> dict[str, str]:
     return {"message": "CVision API is Online"}
 
 
@@ -313,10 +315,10 @@ def get_analysis_stats(request: Request, user: User = Depends(current_active_use
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-_match_llm = None
+_match_llm: ChatGroq | None = None
 
 
-def _get_match_llm():
+def _get_match_llm() -> ChatGroq:
     global _match_llm
     if _match_llm is None:
         _match_llm = ChatGroq(model=settings.groq_model_large, temperature=0.1)
@@ -441,10 +443,10 @@ def match_job_file(
         raise HTTPException(status_code=500, detail="Failed to match job: " + str(e))
 
 
-_tailor_llm = None
+_tailor_llm: ChatGroq | None = None
 
 
-def _get_tailor_llm():
+def _get_tailor_llm() -> ChatGroq:
     global _tailor_llm
     if _tailor_llm is None:
         _tailor_llm = ChatGroq(model=settings.groq_model_fast, temperature=0.2)
@@ -489,10 +491,10 @@ def tailor_resume(request: Request, body: JobMatchRequest, user: User = Depends(
         raise HTTPException(status_code=500, detail="Failed to tailor resume: " + str(e))
 
 
-_standout_llm = None
+_standout_llm: ChatGroq | None = None
 
 
-def _get_standout_llm():
+def _get_standout_llm() -> ChatGroq:
     global _standout_llm
     if _standout_llm is None:
         _standout_llm = ChatGroq(model=settings.groq_model_large, temperature=0.3)
@@ -544,10 +546,10 @@ def stand_out(request: Request, body: JobMatchRequest, user: User = Depends(curr
         raise HTTPException(status_code=500, detail="Failed to generate suggestions: " + str(e))
 
 
-_cover_llm = None
+_cover_llm: ChatGroq | None = None
 
 
-def _get_cover_llm():
+def _get_cover_llm() -> ChatGroq:
     global _cover_llm
     if _cover_llm is None:
         _cover_llm = ChatGroq(model=settings.groq_model_large, temperature=0.3)
@@ -593,10 +595,10 @@ def cover_letter(request: Request, body: CoverLetterRequest, user: User = Depend
         raise HTTPException(status_code=500, detail="Failed to generate cover letter: " + str(e))
 
 
-_rewrite_llm = None
+_rewrite_llm: ChatGroq | None = None
 
 
-def _get_rewrite_llm():
+def _get_rewrite_llm() -> ChatGroq:
     global _rewrite_llm
     if _rewrite_llm is None:
         _rewrite_llm = ChatGroq(model=settings.groq_model_large, temperature=0.2)
@@ -855,15 +857,17 @@ async def analyze_cv(request: Request, file: UploadFile = File(...), user: User 
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-def _search_jobs_raw(skills: list[str], limit: int = 5) -> list[dict]:
+def _search_jobs_raw(skills: list[str], limit: int = 5) -> list[dict[str, Any]]:
     if not skills:
         return []
     try:
         conditions = []
+        params: dict[str, str] = {}
         like_op = "LIKE" if _is_sqlite else "ILIKE"
-        for skill in skills[:5]:
-            escaped = skill.replace("'", "''")
-            conditions.append(f"description {like_op} '%{escaped}%' OR job_title {like_op} '%{escaped}%'")
+        for i, skill in enumerate(skills[:5]):
+            p = f"s{i}"
+            conditions.append(f"description {like_op} :{p} OR job_title {like_op} :{p}")
+            params[p] = f"%{skill}%"
         skill_conditions = " OR ".join(conditions)
         query = text(f"""
             SELECT job_title, job_link, platform, description
@@ -872,7 +876,8 @@ def _search_jobs_raw(skills: list[str], limit: int = 5) -> list[dict]:
             ORDER BY published_date DESC
             LIMIT :limit
         """)
-        df = pd.read_sql(query, engine, params={"limit": limit})
+        params["limit"] = str(limit)
+        df = pd.read_sql(query, engine, params=params)
         logger.info("jobs_raw SQL search: %s results for %s skills", len(df), len(skills))
         return df.to_dict(orient="records")
     except Exception as e:
@@ -880,11 +885,11 @@ def _search_jobs_raw(skills: list[str], limit: int = 5) -> list[dict]:
         return []
 
 
-def _ensure_state(raw):
+def _ensure_state(raw: AgentState | dict[str, Any]) -> AgentState:
     return AgentState(**raw) if isinstance(raw, dict) else raw
 
 
-def _run_pipeline(file_path: str, file_name: str, user_id: int | None = None):
+def _run_pipeline(file_path: str, file_name: str, user_id: int | None = None) -> Generator[str, None, None]:
     try:
         state = AgentState(file_path=file_path, file_name=file_name)
 
@@ -991,7 +996,7 @@ async def analyze_cv_stream(request: Request, file: UploadFile = File(...), user
         tmp.write(contents)
         tmp_path = tmp.name
 
-    async def event_generator():
+    async def event_generator() -> AsyncGenerator[str, None]:
         try:
             loop = asyncio.get_event_loop()
             events = await loop.run_in_executor(None, list, _run_pipeline(tmp_path, file.filename, user.id))

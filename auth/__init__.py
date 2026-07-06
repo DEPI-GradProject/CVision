@@ -1,6 +1,8 @@
 import logging
+from collections.abc import AsyncGenerator
 
 from fastapi import Depends, Request
+from fastapi.responses import Response
 from fastapi_users import BaseUserManager, FastAPIUsers, IntegerIDMixin
 from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
@@ -32,14 +34,16 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     reset_password_token_secret = settings.auth_reset_token_secret or settings.auth_jwt_secret
     verification_token_secret = settings.auth_verification_token_secret or settings.auth_jwt_secret
 
-    async def on_after_register(self, user: User, request: Request | None = None):
+    async def on_after_register(self, user: User, request: Request | None = None) -> None:
         logger.info("User %s (%s) registered", user.id, user.email)
 
-    async def on_after_login(self, user: User, request: Request | None = None, response=None):
+    async def on_after_login(
+        self, user: User, request: Request | None = None, response: Response | None = None
+    ) -> None:
         logger.info("User %s (%s) logged in", user.id, user.email)
 
 
-async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db)):
+async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db)) -> AsyncGenerator[UserManager, None]:
     yield UserManager(user_db)
 
 

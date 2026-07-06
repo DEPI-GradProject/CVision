@@ -382,6 +382,9 @@ def _clean_history_for_user(user_id: int):
 
 
 def test_auth_rate_limit_429():
+    from api import _auth_limits
+
+    _auth_limits.clear()
     for _ in range(11):
         response = client.post(
             "/auth/register",

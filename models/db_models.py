@@ -23,7 +23,7 @@ class RawJob(Base):
     description = Column(Text, nullable=True)
     published_date = Column(DateTime, nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<RawJob(platform='{self.platform}', title='{self.job_title}')>"
 
 
@@ -38,7 +38,7 @@ class TrainingJob(Base):
     Description = Column(Text, nullable=True)
     platform_source = Column(String(50), nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TrainingJob(title='{self.Title}')>"
 
 
@@ -54,7 +54,7 @@ class AnalysisHistory(Base):
     matched_jobs = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AnalysisHistory(id={self.id}, filename='{self.filename}', score={self.ats_score})>"
 
 

@@ -32,11 +32,9 @@ import type { AnalysisHistory, DashboardStats, RawJob } from '@/types'
 
 function CountUp({ value, duration = 1000 }: { value: string; duration?: number }) {
   const [count, setCount] = useState(0)
-  const [show, setShow] = useState(false)
   const num = parseInt(value)
 
   useEffect(() => {
-    setShow(true) // eslint-disable-line react-hooks/set-state-in-effect
     let start = 0
     const step = 16
     const totalSteps = duration / step
@@ -63,7 +61,7 @@ function CountUp({ value, duration = 1000 }: { value: string; duration?: number 
     <motion.span
       className="text-2xl font-bold"
       initial={{ opacity: 0, y: 10 }}
-      animate={show ? { opacity: 1, y: 0 } : {}}
+      animate={{ opacity: 1, y: 0 }}
     >
       {count}
       {value.replace(/\d/g, '')}
@@ -442,8 +440,7 @@ export function DashboardPage() {
                         exit={{ opacity: 0, x: -20 }}
                         whileHover={{ scale: 1.01, x: 4 }}
                         whileTap={{ scale: 0.99 }}
-                        onClick={() => navigate('/analysis', { state: {} })}
-                        className="group flex cursor-pointer items-center gap-4 rounded-xl border border-border bg-surface-light/50 p-4 transition-all hover:border-primary/30 hover:bg-surface-light"
+                        className="group flex items-center gap-4 rounded-xl border border-border bg-surface-light/50 p-4 transition-all hover:border-primary/30 hover:bg-surface-light"
                       >
                         <motion.div
                           className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-muted group-hover:bg-primary/20"

@@ -1,4 +1,5 @@
 import logging
+from typing import Literal
 
 from langgraph.graph import END, StateGraph
 
@@ -27,7 +28,7 @@ def report_builder_node(state: AgentState) -> AgentState:
     return report_builder_agent(state)
 
 
-def should_continue(state: AgentState) -> str:
+def should_continue(state: AgentState) -> Literal["end", "continue"]:
     if state.error:
         logger.warning("Pipeline halted at error: %s", state.error)
         return "end"
