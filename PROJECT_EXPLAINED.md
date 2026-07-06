@@ -489,8 +489,16 @@ The key advantage is semantic matching: a SQL query for "Python" will never retu
 | DELETE | `/auth/users/{id}` | Delete a specific user (admin) | Yes |
 | POST | `/api/v1/analyze-cv` | Upload CV (PDF/DOCX) for full analysis | Yes |
 | POST | `/api/v1/analyze-cv/stream` | Upload CV with Server-Sent Events (real-time progress) | Yes |
+| POST | `/api/v1/analyze-cv/match-job` | Match CV against a specific job at time of analysis | Yes |
 | GET | `/api/v1/jobs/latest` | Get latest scraped jobs (paginated, max 50) | No |
 | GET | `/api/v1/jobs/training` | Get training job data (paginated, max 100) | No |
+| POST | `/api/v1/jobs/match-job` | Match an already-analyzed CV against jobs or a specific job ID | Yes |
+| POST | `/api/v1/jobs/match-job/file` | Upload CV + optional job ID, runs match independently | Yes |
+| POST | `/api/v1/jobs/tailor-resume` | Tailor a CV resume section to match a specific job | Yes |
+| POST | `/api/v1/jobs/stand-out` | Generate "stand-out" suggestions for a specific role/industry | Yes |
+| POST | `/api/v1/jobs/cover-letter` | Generate a tailored cover letter for a CV + job pairing | Yes |
+| POST | `/api/v1/skills/rewrite-suggestions` | Suggest specific rewrite improvements for CV bullet points | Yes |
+| POST | `/api/v1/skills/market-demand` | Analyze skills market demand against a job description | Yes |
 | GET | `/api/v1/history` | Get authenticated user's analysis history | Yes |
 | GET | `/api/v1/stats` | Get authenticated user's aggregate statistics | Yes |
 
@@ -543,6 +551,18 @@ The key advantage is semantic matching: a SQL query for "Python" will never retu
 - Shows analysis history as a searchable, scrollable list.
 - Each history item shows: filename, date, extracted skills, ATS score.
 - Calls `GET /api/v1/history` and `GET /api/v1/stats` on mount.
+
+## Job Match Page (`/job-match`)
+- Protected page — redirects to Login if not authenticated.
+- User selects a previous analysis from a dropdown.
+- Four action buttons: Find Jobs, Tailor Resume, Stand Out, Cover Letter.
+- Each action calls the corresponding API endpoint and renders results in a right-side panel.
+- Results panel supports markdown rendering for tailor/cover letter outputs.
+
+## Protected Route Pattern
+- All protected pages (`/analysis`, `/dashboard`, `/job-match`) use a `ProtectedRoute` wrapper component.
+- `ProtectedRoute` checks `auth.isAuthenticated`; if false, redirects to `/login` with the intended destination in state.
+- After login, the user is redirected back to the original page (not a hard-coded `/upload`).
 
 ---
 
@@ -828,17 +848,53 @@ The algorithm is deliberately transparent and explainable. Unlike a machine lear
 
 **What is NOT implemented yet**: HTTPS termination (would use a reverse proxy like nginx), SQL injection prevention at the ORM level is adequate but not audited, no CSRF protection (not needed for token-based auth), no input sanitization for XSS (the frontend reacts to this, not the API).
 
-### Q15: "Why does the frontend use static imports and not code splitting?"
+### Q15: "Why does the frontend use static imports and not code splitting?" (Resolved in v0.3.0)
 
-The frontend currently bundles all code into a single JavaScript file. This is fine for the current scale because the entire application is small. For larger applications, code splitting (lazy loading routes) would be beneficial.
-
-That said, we do use React Router's layout system — the `MainLayout` wraps all routes, and each page is a separate component. Adding dynamic imports with `React.lazy()` would require minimal refactoring:
+This was originally a known limitation — the entire frontend was bundled into a single JS file. In v0.3.0, we implemented code splitting using `React.lazy()`:
 
 ```tsx
 const AnalysisPage = React.lazy(() => import('@/pages/AnalysisPage'))
+const DashboardPage = React.lazy(() => import('@/pages/DashboardPage'))
+// etc.
 ```
 
-This is identified as future work in the known limitations.
+Each route now loads its page component as a separate chunk via `Suspense` with a fallback spinner. This reduced the initial bundle size from a single large file to smaller, on-demand chunks (LoginPage: 4.5kB, AnalysisPage: 18.8kB, DashboardPage: 178kB). The trade-off is a brief loading indicator when navigating to a new route for the first time.
+
+### Q16: "What new features were added in v0.3.0?"
+
+v0.3.0 focused on three areas: new AI-powered job tools, frontend UX improvements, and bug fixes.
+
+**New Endpoints:**
+- **Match Job** (`/api/v1/jobs/match-job` and `/file`): Match an analyzed or fresh CV against the job database or a specific job ID. Uses the existing two-stage retrieval (FAISS + LLM re-scoring).
+- **Tailor Resume** (`/api/v1/jobs/tailor-resume`): Given a CV analysis and a job description, rewrite the experience section to emphasize matching keywords and achievements.
+- **Stand Out** (`/api/v1/jobs/stand-out`): Generate personalized suggestions for how a candidate can differentiate themselves for a specific role.
+- **Cover Letter** (`/api/v1/jobs/cover-letter`): Generate a professionally formatted cover letter based on the CV analysis and target job.
+- **Rewrite Suggestions** (`/api/v1/skills/rewrite-suggestions`): Analyze individual CV bullet points and suggest specific rewrites for stronger impact.
+- **Market Demand** (`/api/v1/skills/market-demand`): Evaluate which skills are in demand for a given job description versus which the candidate lacks.
+
+**New Frontend Pages:**
+- **Job Match Page** (`/job-match`): Select an analysis, pick between "Find Jobs," "Tailor Resume," "Stand Out," or "Cover Letter," and view results in a dedicated results panel.
+- **Mobile responsive navbar**: Hamburger menu with drawer for mobile devices.
+- **Protected route refactoring**: All protected pages use a reusable `ProtectedRoute` wrapper that checks auth and redirects to /login if unauthenticated.
+
+**Accessibility & Code Quality:**
+- Code splitting with `React.lazy()` for all route components.
+- `aria-label` attributes on all interactive elements (pagination, toast dismiss, nav, password toggle).
+- `role="alert"` on error banners for screen reader announcements.
+- Removed `tabIndex={-1}` from password toggle buttons, added `aria-label` to all icon-only buttons.
+
+**Bug Fixes:**
+- Fixed: Rate limit testing endpoint had wrong path (`api/v1/analyze-cv` → `api/v1/analyze-cv/stream` for `test_rate_limiting`).
+- Fixed: FAISS retriever used incorrect response field (`job_title` vs `title`), fixed to match knowledge graph schema.
+- Fixed: Missing `/rewrite-suggestions` route caused 404 in `api.py`.
+- Fixed: LangGraph pipeline error handling — streaming pipeline now catches `json.JSONDecodeError` from malformed LLM responses and surfaces a user-friendly error.
+- Fixed: Logout button visible on mobile login page (hidden when not authenticated).
+- Fixed: Navigation items duplicated in mobile drawer.
+- Fixed: History page missing "no analyses" guidance for first-time users.
+
+**API Response Consistency:**
+- Normalized all new endpoint response schemas to include `success: bool` and `data: dict` wrapping (matching the existing streaming endpoint pattern).
+- All endpoint-level errors return `{"detail": "..."}` strings (matching FastAPI convention).
 
 ---
 
@@ -858,7 +914,7 @@ This is identified as future work in the known limitations.
 ## AI & LLM
 - **No fallback if Groq is down**: The system depends entirely on Groq's API. If Groq is unavailable, analysis fails. A fallback to another provider (e.g., OpenAI, or a local model) would improve reliability.
 - **No caching of analysis results**: If two users upload similar CVs, the system re-analyzes both from scratch. Caching results (keyed by a hash of the CV text) would save costs and improve response times.
-- **No streaming in LangGraph error handling**: The `_run_pipeline` function used for streaming catches errors at the top level, but errors inside individual nodes could be more gracefully reported.
+- ~~**No streaming in LangGraph error handling**~~ ✅ **Resolved in v0.3.0**: Streaming pipeline now catches `json.JSONDecodeError` from malformed LLM responses and surfaces a user-friendly error instead of crashing the connection.
 - **No prompt versioning**: The LLM prompts are hardcoded in the agent files. A prompt management system would allow A/B testing and rollback of prompts.
 
 ## Job Matching & Data
@@ -872,8 +928,10 @@ This is identified as future work in the known limitations.
 - **No background task queue**: CV analysis runs synchronously in the HTTP request. For high traffic, it should be offloaded to a background worker (Celery) and the frontend should poll for results.
 - **10MB file limit**: Hardcoded maximum. Some CVs with embedded images or portfolios exceed this. A configurable limit or cloud storage integration would be better.
 
-## Frontend
-- **No code splitting**: The entire frontend is a single bundle. For faster initial load, routes should be lazily loaded.
+## Frontend (Addressed in v0.3.0)
+- ~~**No code splitting**~~ ✅ **Resolved**: Routes now use `React.lazy()` for dynamic imports (LoginPage: 4.5kB, AnalysisPage: 18.8kB, DashboardPage: 178kB separate chunks).
+- ~~**No mobile hamburger menu**~~ ✅ **Resolved**: Navbar now has a responsive mobile drawer with hamburger toggle, auth buttons included.
+- ~~**No accessibility support**~~ ✅ **Resolved**: All error banners have `role="alert"`, password toggles have `aria-label` and removed `tabIndex={-1}`, toast dismiss and pagination buttons have `aria-label`, nav has `aria-label`/`aria-current`.
 - **No offline support**: The app requires a continuous internet connection. A service worker could cache static assets and enable offline access.
 - **No i18n**: The UI is English-only. Internationalization (react-i18next) would make it accessible to Arabic-speaking users (relevant for this market).
 - **No PWA support**: The app cannot be installed on a mobile device as a native-like app. Adding a manifest.json and service worker would make it a Progressive Web App.
@@ -885,4 +943,4 @@ This is identified as future work in the known limitations.
 
 ---
 
-*This document was generated based on the actual source code of CVision v0.2.0. All explanations refer to real code paths, data models, and configurations in the repository.*
+*This document was generated based on the actual source code of CVision v0.3.0. All explanations refer to real code paths, data models, and configurations in the repository.*
