@@ -334,6 +334,7 @@ export function JobMatchPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
+            role="alert"
             className="mx-auto mt-6 max-w-2xl flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-error"
           >
             <AlertCircle className="h-4 w-4" /> {error}

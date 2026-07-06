@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, text
 engine = create_engine(settings.database_url_with_ssl)
 with engine.connect() as conn:
     conn.execute(text('SELECT 1'))
-" 2>/dev/null && echo "Database ready" && break
+" && echo "Database ready" && break
   echo "Waiting for database... (attempt $i/30)"
   sleep 2
   if [ "$i" = "30" ]; then
@@ -33,4 +33,4 @@ if [ ! -f "Data/faiss_db/index.faiss" ]; then
     fi
 fi
 
-exec uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}
+exec uvicorn api:app --host 0.0.0.0 --port ${PORT:-7860} --workers ${UVICORN_WORKERS:-$(nproc 2>/dev/null || echo 1)}

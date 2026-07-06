@@ -1,6 +1,7 @@
 # agents/cv_analyzer.py
 
 import json
+import logging
 import re
 
 from langchain_core.output_parsers import StrOutputParser
@@ -10,7 +11,9 @@ from langchain_groq import ChatGroq
 from config import settings
 from models.schemas import AgentState, AnalysisResult, ATSBreakdown, ATSResult
 
-llm = ChatGroq(model=settings.groq_model_large, temperature=0.3)
+logger = logging.getLogger(__name__)
+
+llm = ChatGroq(model=settings.groq_model_large, temperature=0.3, timeout=30, max_retries=2)
 
 STANDARD_FONTS = ["arial", "calibri", "times new roman", "helvetica", "georgia", "verdana", "tahoma", "trebuchet"]
 
@@ -83,7 +86,7 @@ def compute_ats(data: dict) -> dict:
             structure_score -= 25
             issues.append(f"Missing required section: {section.capitalize()}")
 
-    has_dates = any(str(year) in cv_text for year in range(2000, 2027))
+    has_dates = bool(re.search(r"\b(?:19|20)\d{2}\b", cv_text))
     if not has_dates:
         structure_score -= 15
         issues.append("No clear dates found in experience or education")
@@ -202,6 +205,7 @@ def cv_analyzer_agent(state: AgentState) -> AgentState:
         )
 
     except Exception as e:
+        logger.error("CV analyzer agent error: %s", e, exc_info=True)
         state.error = f"Error analyzing CV: {str(e)}"
 
     return state

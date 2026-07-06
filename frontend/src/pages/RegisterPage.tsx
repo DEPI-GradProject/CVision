@@ -68,6 +68,7 @@ export function RegisterPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
+                    role="alert"
                     className="flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-error"
                   >
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -111,8 +112,8 @@ export function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
-                      tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>

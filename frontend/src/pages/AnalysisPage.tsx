@@ -499,7 +499,7 @@ export function AnalysisPage() {
   if (error) {
     return (
       <AnimatedPage>
-        <div className="mx-auto max-w-lg px-4 py-24 text-center">
+        <div className="mx-auto max-w-lg px-4 py-24 text-center" role="alert">
           <SpringFade>
             <div className="mb-6 flex justify-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
@@ -558,7 +558,7 @@ export function AnalysisPage() {
         <div className="mb-8 flex items-center gap-4">
           <SpringFade delay={0}>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/upload')} className="rounded-full">
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </motion.div>
@@ -658,6 +658,7 @@ export function AnalysisPage() {
                               <button
                                 onClick={() => setJobsPage((p) => Math.max(0, p - 1))}
                                 disabled={safePage === 0}
+                                aria-label="Previous page"
                                 className="px-3 py-1.5 text-xs font-medium rounded-lg border border-border transition disabled:opacity-30 hover:border-primary/50"
                               >
                                 Previous
@@ -666,6 +667,7 @@ export function AnalysisPage() {
                                 <button
                                   key={i}
                                   onClick={() => setJobsPage(i)}
+                                  aria-label={`Go to page ${i + 1}`}
                                   className={cn(
                                     'w-8 h-8 text-xs font-medium rounded-lg border transition',
                                     i === safePage
@@ -679,6 +681,7 @@ export function AnalysisPage() {
                               <button
                                 onClick={() => setJobsPage((p) => Math.min(totalPages - 1, p + 1))}
                                 disabled={safePage === totalPages - 1}
+                                aria-label="Next page"
                                 className="px-3 py-1.5 text-xs font-medium rounded-lg border border-border transition disabled:opacity-30 hover:border-primary/50"
                               >
                                 Next
@@ -766,11 +769,27 @@ export function AnalysisPage() {
             </SpringFade>
 
             <SpringFade delay={0.4}>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <Link to="/upload">
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
                     <Button variant="gradient" className="group rounded-full">
                       Analyze Another CV
+                      <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                  </motion.div>
+                </Link>
+                <Link to="/dashboard">
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                    <Button variant="outline" className="group rounded-full">
+                      View Dashboard
+                      <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                  </motion.div>
+                </Link>
+                <Link to="/match-job">
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                    <Button variant="outline" className="group rounded-full">
+                      Match Against a Job
                       <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </motion.div>

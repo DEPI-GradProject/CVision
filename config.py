@@ -37,6 +37,7 @@ class Settings(BaseSettings):
         url = self.database_url
         if not url or url.startswith("sqlite"):
             return url
+        url = url.replace("&channel_binding=require", "").replace("?channel_binding=require", "")
         if "sslmode=" not in url:
             url += "?sslmode=require"
         return url
@@ -50,6 +51,8 @@ class Settings(BaseSettings):
             return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
         if url.startswith("postgresql://"):
             url = "postgresql+asyncpg://" + url[len("postgresql://") :]
+        url = url.replace("&channel_binding=require", "")
+        url = url.replace("?channel_binding=require", "")
         url = url.replace("sslmode=require", "ssl=require")
         url = url.replace("sslmode=prefer", "ssl=prefer")
         url = url.replace("sslmode=disable", "ssl=disable")

@@ -13,7 +13,6 @@ import {
   LineChart,
   Loader2,
   X,
-  ChevronDown,
   ChevronRight,
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
@@ -89,10 +88,10 @@ function PersistedJobs({ jobs, skills }: { jobs: PersistedJobItem[]; skills: str
       {pageJobs.map((job, i) => (
         <div
           key={start + i}
-          className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface-light/30 p-3"
+          className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface-light/30 p-3 transition hover:border-[#ff9500]/30 hover:bg-[#ff9500]/[0.03]"
         >
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium truncate">{job.job_title}</p>
+            <p className="text-sm font-semibold truncate text-text-primary">{job.job_title}</p>
             <div className="flex items-center gap-2 mt-0.5">
               <Badge variant="default" className="rounded-full text-[10px] px-2 py-0">
                 {job.platform}
@@ -108,9 +107,9 @@ function PersistedJobs({ jobs, skills }: { jobs: PersistedJobItem[]; skills: str
             href={job.job_link}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 text-xs font-medium text-primary hover:underline whitespace-nowrap"
+            className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-[#ff9500]/10 px-3 py-1.5 text-xs font-semibold text-[#ff9500] transition hover:bg-[#ff9500]/20 hover:scale-105 whitespace-nowrap"
           >
-            Apply &rarr;
+            View Job &rarr;
           </a>
         </div>
       ))}
@@ -119,6 +118,7 @@ function PersistedJobs({ jobs, skills }: { jobs: PersistedJobItem[]; skills: str
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={safePage === 0}
+            aria-label="Previous page"
             className="px-2.5 py-1 text-[10px] font-medium rounded-lg border border-border transition disabled:opacity-30 hover:border-primary/50"
           >
             Previous
@@ -127,6 +127,7 @@ function PersistedJobs({ jobs, skills }: { jobs: PersistedJobItem[]; skills: str
             <button
               key={i}
               onClick={() => setPage(i)}
+              aria-label={`Go to page ${i + 1}`}
               className={cn(
                 'w-7 h-7 text-[10px] font-medium rounded-lg border transition',
                 i === safePage
@@ -140,6 +141,7 @@ function PersistedJobs({ jobs, skills }: { jobs: PersistedJobItem[]; skills: str
           <button
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={safePage === totalPages - 1}
+            aria-label="Next page"
             className="px-2.5 py-1 text-[10px] font-medium rounded-lg border border-border transition disabled:opacity-30 hover:border-primary/50"
           >
             Next
@@ -299,7 +301,10 @@ export function DashboardPage() {
                 <motion.div key={stat.label} variants={staggerItem}>
                   <ScrollReveal delay={i * 100}>
                     <Card
-                      className={cn(stat.label === 'Jobs Matched' && 'cursor-pointer transition hover:border-[#ff9500]/50')}
+                      className={cn(
+                        stat.label === 'Jobs Matched' && 'cursor-pointer transition hover:border-[#ff9500]/50',
+                        stat.label !== 'Jobs Matched' && 'cursor-default',
+                      )}
                       onClick={stat.label === 'Jobs Matched' ? () => setShowJobs(true) : undefined}
                     >
                       <CardContent className="flex items-center gap-4 p-6">
@@ -309,6 +314,11 @@ export function DashboardPage() {
                         <div>
                           <CountUp value={stat.value} />
                           <p className="text-sm text-text-secondary">{stat.label}</p>
+                          {stat.label === 'Jobs Matched' && (
+                            <p className="text-xs font-semibold text-[#ff9500] mt-1">
+                              You can see your previous Job matching from here &rarr;
+                            </p>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -514,9 +524,14 @@ export function DashboardPage() {
             >
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="h-5 w-5 text-[#ff9500]" />
-                    <CardTitle className="text-lg">Job Matches Breakdown</CardTitle>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-5 w-5 text-[#ff9500]" />
+                      <CardTitle className="text-lg">Your Matched Jobs</CardTitle>
+                    </div>
+                    <CardDescription className="mt-1">
+                      Click any analysis below to see the jobs matched to your CV
+                    </CardDescription>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => { setShowJobs(false); setExpandedId(null) }}>
                     <X className="h-4 w-4" />
@@ -529,27 +544,21 @@ export function DashboardPage() {
                       <div key={h.id}>
                         <button
                           onClick={() => handleRowClick(h)}
-                          className="w-full flex items-center gap-4 rounded-lg border border-border bg-surface-light/50 p-4 text-left transition hover:border-primary/30 hover:bg-surface-light"
+                          className="w-full flex items-center gap-4 rounded-lg border border-border bg-surface-light/50 p-4 text-left transition hover:border-[#ff9500]/40 hover:bg-[#ff9500]/[0.03] hover:shadow-sm hover:shadow-[#ff9500]/5 cursor-pointer"
                         >
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#ff9500]/10 shrink-0">
                             <Briefcase className="h-5 w-5 text-[#ff9500]" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">{h.filename}</p>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {h.skills_extracted.slice(0, 4).map((s) => (
-                                <Badge key={s} variant="outline" className="px-1.5 py-0 text-[10px]">
-                                  {s}
-                                </Badge>
-                              ))}
-                            </div>
+                            <p className="truncate text-sm font-semibold text-text-primary hover:text-[#ff9500] transition-colors">{h.filename}</p>
+                            <p className="text-[11px] text-text-muted mt-0.5 flex items-center gap-1">
+                              {expandedId === h.id ? 'Click to hide matched jobs' : 'Click to see your matched jobs'}
+                              <ChevronRight className={cn('h-3 w-3 inline transition-transform', expandedId === h.id && 'rotate-90')} />
+                            </p>
                           </div>
                           <div className="flex flex-col items-end shrink-0">
                             <span className="text-lg font-bold text-[#ff9500]">{h.job_matches}</span>
-                            <span className="text-[10px] text-text-muted">matches</span>
-                          </div>
-                          <div className="shrink-0 text-text-muted">
-                            {expandedId === h.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            <span className="text-[10px] text-text-muted">jobs</span>
                           </div>
                         </button>
                         <AnimatePresence>

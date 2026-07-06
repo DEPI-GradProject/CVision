@@ -14,10 +14,10 @@ from utils.retriever import search_jobs
 logger = logging.getLogger(__name__)
 
 # Fast LLM for Query Enhancement
-llm_fast = ChatGroq(model=settings.groq_model_fast, temperature=0.1)
+llm_fast = ChatGroq(model=settings.groq_model_fast, temperature=0.1, timeout=30, max_retries=2)
 
 # Strong LLM for Match Scoring
-llm_strong = ChatGroq(model=settings.groq_model_large, temperature=0.1)
+llm_strong = ChatGroq(model=settings.groq_model_large, temperature=0.1, timeout=30, max_retries=2)
 
 # Query Enhancement Prompt
 query_prompt = PromptTemplate.from_template("""
@@ -84,7 +84,13 @@ def job_matcher_agent(state: AgentState) -> AgentState:
         logger.info("Enhanced Query: %s", enhanced_query)
 
         # Step 2: Semantic Search with Enhanced Query
-        raw_jobs = search_jobs(enhanced_query, k=10)
+        try:
+            raw_jobs = search_jobs(enhanced_query, k=10)
+        except Exception as faiss_err:
+            logger.warning("FAISS search unavailable, skipping job matching: %s", faiss_err)
+            state.job_matches = JobMatches(matched_jobs=[])
+            state.error = None
+            return state
 
         jobs_text = ""
         for job in raw_jobs:
@@ -120,6 +126,7 @@ def job_matcher_agent(state: AgentState) -> AgentState:
         state.job_matches = JobMatches(matched_jobs=matched_jobs)
 
     except Exception as e:
+        logger.error("Job matcher agent error: %s", e, exc_info=True)
         state.error = f"Error matching jobs: {str(e)}"
 
     return state

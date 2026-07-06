@@ -1,5 +1,7 @@
 # agents/report_builder.py
 
+import logging
+
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
@@ -7,7 +9,9 @@ from langchain_groq import ChatGroq
 from config import settings
 from models.schemas import AgentState
 
-llm = ChatGroq(model=settings.groq_model_large, temperature=0.3)
+logger = logging.getLogger(__name__)
+
+llm = ChatGroq(model=settings.groq_model_large, temperature=0.3, timeout=30, max_retries=2)
 
 parser = StrOutputParser()
 
@@ -90,21 +94,20 @@ def report_builder_agent(state: AgentState) -> AgentState:
             state.error = "No analysis found, run cv_analyzer first"
             return state
 
-        if state.job_matches is None:
-            state.error = "No job matches found, run job_matcher first"
-            return state
-
         ats = state.analysis.ats_result
         breakdown = ats.breakdown if ats else None
 
         jobs_text = ""
-        for job in state.job_matches.matched_jobs:
-            jobs_text += f"- {job.title}\n"
-            jobs_text += f"  Match Score: {job.match_score}/100\n"
-            jobs_text += f"  Matched Skills: {', '.join(job.matched_skills or [])}\n"
-            jobs_text += f"  Missing Skills: {', '.join(job.missing_skills or [])}\n"
-            jobs_text += f"  Reason: {job.reason}\n"
-            jobs_text += f"  Link: {job.link}\n\n"
+        if state.job_matches:
+            for job in state.job_matches.matched_jobs:
+                jobs_text += f"- {job.title}\n"
+                jobs_text += f"  Match Score: {job.match_score}/100\n"
+                jobs_text += f"  Matched Skills: {', '.join(job.matched_skills or [])}\n"
+                jobs_text += f"  Missing Skills: {', '.join(job.missing_skills or [])}\n"
+                jobs_text += f"  Reason: {job.reason}\n"
+                jobs_text += f"  Link: {job.link}\n\n"
+        if not jobs_text:
+            jobs_text = "No job matches available at this time."
 
         result = chain.invoke(
             {
@@ -125,6 +128,7 @@ def report_builder_agent(state: AgentState) -> AgentState:
         state.final_report = result
 
     except Exception as e:
+        logger.error("Report builder agent error: %s", e, exc_info=True)
         state.error = f"Error building report: {str(e)}"
 
     return state
