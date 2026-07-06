@@ -45,7 +45,7 @@ def _get_safe_faiss_path() -> str:
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        _embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     return _embeddings
 
 
