@@ -129,7 +129,7 @@ jobs:
       - name: Build Frontend image
         run: docker build -t cvision-frontend -f frontend/Dockerfile frontend/
       - name: Scan API image with Trivy
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: "cvision-api"
           format: "sarif"
@@ -137,7 +137,7 @@ jobs:
           severity: "HIGH,CRITICAL"
           exit-code: "1"
       - name: Scan Frontend image with Trivy
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: "cvision-frontend"
           format: "sarif"
